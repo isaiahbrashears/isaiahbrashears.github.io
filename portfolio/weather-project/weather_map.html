@@ -62,14 +62,13 @@
     setInterval(function () {
         time = new Date().toLocaleTimeString();
         var hour = new Date().getHours();
-        console.log(hour);
         $('#time').html(time);
         if(hour >= 20){
             $('body').addClass('nightmode');
             map.setStyle('mapbox://styles/mapbox/dark-v10');
         }
 
-    }, 1000);
+    }, 500);
 
     //STARTS MARKER AT SAN ANTONIO
 
