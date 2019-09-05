@@ -89,6 +89,15 @@
             $('#count').html(count);
         });
 
+        $('#start').on('tap', function () {
+            simonsPicks = [];
+            simonsColor();
+            runSimon(simonsPicks);
+            count += 1;
+            playerPicks = [];
+            $('#count').html(count);
+        });
+
         function nextRound(){
             simonsColor();
             runSimon(simonsPicks);
