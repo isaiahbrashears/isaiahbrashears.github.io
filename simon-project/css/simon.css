@@ -139,4 +139,95 @@ body{
     margin-top: 3.8em;
 }
 
+@media screen and (max-width:574px) {
+
+    .circle {
+       background-color: white;
+    }
+
+    .bottom-left{
+
+        width: 7.5em;
+        height: 7.5em;
+        background: gold;
+        border-radius: 0 0 0 7.5em;
+        -moz-border-radius: 0 0 0 7.5em;
+        -webkit-border-radius: 0 0 0 7.5em;
+        grid-area: yellow;
+    }
+    .bottom-right{
+
+        width: 7.5em;
+        height: 7.5em;
+        background: blue;
+        border-radius: 0 0 7.5em 0;
+        -moz-border-radius: 0 0 7.5em 0;
+        -webkit-border-radius: 0 0 7.5em 0;
+    }
+    .top-left{
+
+        width: 7.5em;
+        height: 7.5em;
+        background: darkgreen;
+        border-radius: 7.5em 0 0 0;
+        -moz-border-radius: 7.5em 0 0 0;
+        -webkit-border-radius: 7.5em 0 0 0;
+    }
+    .top-right{
+
+        width: 7.5em;
+        height: 7.5em;
+        background: firebrick;
+        border-radius: 0 7.5em 0 0;
+        -moz-border-radius: 0 7.5em 0 0;
+        -webkit-border-radius: 0 7.5em 0 0;
+    }
+    .inner-circle{
+        position: relative;
+        left: 4em;
+        top: -15em;
+        height: 15em;
+        width: 8em;
+        background-color: #555;
+        border-radius: 0;
+    }
+    .blue{
+        width: 7.5em;
+        height: 7.5em;
+        background: lightsteelblue;
+        border-radius: 0 0 7.5em 0;
+        -moz-border-radius: 0 0 7.5em 0;
+        -webkit-border-radius: 0 0 7.5em 7.5
+    }
+
+    .yellow{
+        width: 7.5em;
+        height: 7.5em;
+        background: yellow;
+        border-radius: 0 0 0 7.5em;
+        -moz-border-radius: 0 0 0 7.5em;
+        -webkit-border-radius: 0 0 0 7.5em;
+    }
+
+    .red{
+        width: 7.5em;
+        height: 7.5em;
+        background: red;
+        border-radius: 0 7.5em 0 0;
+        -moz-border-radius: 0 7.5em 0 0;
+        -webkit-border-radius: 0 7.5em 0 0;
+    }
+
+    .green{
+        width: 7.5em;
+        height: 7.5em;
+        background: lawngreen;
+        border-radius: 7.5em 0 0 0;
+        -moz-border-radius: 7.5em 0 0 0;
+        -webkit-border-radius: 7.5em 0 0 0;
+    }
+
+
+}
+
 
