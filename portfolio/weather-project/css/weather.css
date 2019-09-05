@@ -140,3 +140,21 @@ header #time{
 .nightmode #searchContainer{
     background-color: #202020;
 }
+
+@media screen and (max-width:1080px) {
+
+    .heading{display: none}
+
+}
+
+@media screen and (max-width:574px) {
+    .col-sm-4:nth-of-type(2){
+        display: none;
+    }
+
+    .col-sm-4:nth-of-type(3){
+        display: none;
+    }
+
+
+}
