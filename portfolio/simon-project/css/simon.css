@@ -1,0 +1,142 @@
+body{
+    text-align: center;
+}
+
+.circle{
+
+    display: grid;
+    margin: 0 auto;
+    margin-top: 5em;
+    height: 30em;
+    width: 30em;
+    background-color: #555;
+    border-radius: 50%;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+    'green red'
+    ' yellow blue';
+}
+
+.bottom-right{
+    width: 15em;
+    height: 15em;
+    background: blue;
+    border-radius: 0 0 15em 0;
+    -moz-border-radius: 0 0 15em 0;
+    -webkit-border-radius: 0 0 15em 0;
+    grid-area: blue;
+
+}
+
+.bottom-left{
+    width: 15em;
+    height: 15em;
+    background: gold;
+    border-radius: 0 0 0 15em;
+    -moz-border-radius: 0 0 0 15em;
+    -webkit-border-radius: 0 0 0 15em;
+    grid-area: yellow;
+
+}
+
+.top-right{
+    width: 15em;
+    height: 15em;
+    background: firebrick;
+    border-radius: 0 15em 0 0;
+    -moz-border-radius: 0 15em 0 0;
+    -webkit-border-radius: 0 15em 0 0;
+    grid-area: red;
+
+}
+
+.top-left{
+    width: 15em;
+    height: 15em;
+    background: darkgreen;
+    border-radius: 15em 0 0 0;
+    -moz-border-radius: 15em 0 0 0;
+    -webkit-border-radius: 15em 0 0 0;
+    grid-area: green;
+
+}
+
+.inner-circle{
+    margin: 0 auto;
+    height: 15em;
+    width: 15em;
+    background-color: #555;
+    border-radius: 50%;
+    position: relative;
+    left: 7.5em;
+    bottom: 22.5em;
+    color: whitesmoke;
+    z-index: 3;
+}
+
+.blue{
+    width: 15em;
+    height: 15em;
+    background: lightsteelblue;
+    border-radius: 0 0 15em 0;
+    -moz-border-radius: 0 0 15em 0;
+    -webkit-border-radius: 0 0 15em 0;
+    grid-area: blue;
+    -webkit-animation: fadeinout .5s linear forwards;
+    animation: fadeinout .5s linear forwards;
+}
+
+.yellow{
+    width: 15em;
+    height: 15em;
+    background: yellow;
+    border-radius: 0 0 0 15em;
+    -moz-border-radius: 0 0 0 15em;
+    -webkit-border-radius: 0 0 0 15em;
+    grid-area: yellow;
+
+    -webkit-animation: fadeinout .5s linear forwards;
+    animation: fadeinout .5s linear forwards;
+}
+
+.red{
+    width: 15em;
+    height: 15em;
+    background: red;
+    border-radius: 0 15em 0 0;
+    -moz-border-radius: 0 15em 0 0;
+    -webkit-border-radius: 0 15em 0 0;
+    grid-area: red;
+
+    -webkit-animation: fadeinout .5s linear forwards;
+    animation: fadeinout .5s linear forwards;
+}
+
+.green{
+    width: 15em;
+    height: 15em;
+    background: lawngreen;
+    border-radius: 15em 0 0 0;
+    -moz-border-radius: 15em 0 0 0;
+    -webkit-border-radius: 15em 0 0 0;
+    grid-area: green;
+    -webkit-animation: fadeinout .5s linear forwards;
+    animation: fadeinout .5s linear forwards;
+}
+
+@-webkit-keyframes fadeinout {
+    0%,100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+@keyframes fadeinout {
+    0%,100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.inner-circle h3{
+    margin-top: 3.8em;
+}
+
+

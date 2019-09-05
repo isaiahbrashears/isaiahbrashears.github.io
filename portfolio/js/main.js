@@ -12,6 +12,13 @@
         $('.responsive-menu').stop(true,true).slideToggle();
         return false;
     });
+    
+    $('.project-inside').click(function () {
+        // var addressValue = $(this).children().children().attr("href");
+        // console.log(addressValue)
+
+        console.log('test')
+    })
 
 
 
