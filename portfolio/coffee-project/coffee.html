@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+</head>
+<body>
+    <h1>Coffee!</h1>
+    <hr>
+<div class="grid">
+
+
+    <!-- SEARCH COFFEES FORM   -->
+    <div class="forms1">
+        <form>
+            <label for="roast-selection"><h6>Roast</h6></label>
+            <select class="form-control form-control-lg" id="roast-selection">
+                <option selected value="all">all</option>
+                <option>light</option>
+                <option>medium</option>
+                <option>dark</option>
+
+            </select>
+            <label><h6>Coffee Name</h6></label>
+            <input class="form-control form-control-lg" id="searchCoffeeName" type="text" >
+            <button id="submit" class="btn btn-primary btn-lg btn-block" >Submit</button>
+        </form>
+    </div>
+
+
+    <!--  ADD COFFEES FORM  -->
+    <div class="forms2">
+        <form>
+            <label for="roast-creator"><h6>Roast</h6></label>
+            <select class="form-control form-control-lg" id="roast-creator">
+                <option>light</option>
+                <option>medium</option>
+                <option>dark</option>
+
+            </select>
+            <label><h6>Coffee Name</h6></label>
+            <input class="form-control form-control-lg" id="newCoffeeName" type="text">
+            <button id="submit2" class="btn btn-primary btn-lg btn-block" >Submit</button>
+        </form>
+    </div>
+
+    <!--   LIST OF COFFEES  -->
+    <div class="coffee-column container"  id="coffees"></div>
+
+</div>
+    <script src="js/main.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+
+</body>
+</html>

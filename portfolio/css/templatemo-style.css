@@ -488,7 +488,9 @@ h3.profile-title {
 }
 .project-item img {
   width: 100%;
+  height: 14em;
   display: block;
+  border: .5px solid #5F6D7E;
 }
 .project-item:hover .project-hover {
   top: 0;
