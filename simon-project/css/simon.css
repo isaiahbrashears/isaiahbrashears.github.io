@@ -136,20 +136,28 @@ body{
 }
 
 .inner-circle h3{
-    margin-top: 3.8em;
+    margin-top: 2em;
+    margin-bottom: .6em;
+}
+.inner-circle button{
+    margin-bottom: 1em;
 }
 
-@media screen and (max-width:574px) {
+@media screen and (max-width:625px) {
 
     .circle {
        background-color: white;
+        position: relative;
+
+
+
     }
 
     .bottom-left{
 
         width: 7.5em;
         height: 7.5em;
-        background: gold;
+        background: goldenrod;
         border-radius: 0 0 0 7.5em;
         -moz-border-radius: 0 0 0 7.5em;
         -webkit-border-radius: 0 0 0 7.5em;
@@ -177,17 +185,17 @@ body{
 
         width: 7.5em;
         height: 7.5em;
-        background: firebrick;
+        background: darkred;
         border-radius: 0 7.5em 0 0;
         -moz-border-radius: 0 7.5em 0 0;
         -webkit-border-radius: 0 7.5em 0 0;
     }
     .inner-circle{
         position: relative;
-        left: 4em;
+        left: 59px;
         top: -15em;
         height: 15em;
-        width: 8em;
+        width: 131px;
         background-color: #555;
         border-radius: 0;
     }
@@ -197,13 +205,13 @@ body{
         background: lightsteelblue;
         border-radius: 0 0 7.5em 0;
         -moz-border-radius: 0 0 7.5em 0;
-        -webkit-border-radius: 0 0 7.5em 7.5
+        -webkit-border-radius: 0 0 7.5em 0;
     }
 
     .yellow{
         width: 7.5em;
         height: 7.5em;
-        background: yellow;
+        background: lightyellow;
         border-radius: 0 0 0 7.5em;
         -moz-border-radius: 0 0 0 7.5em;
         -webkit-border-radius: 0 0 0 7.5em;
