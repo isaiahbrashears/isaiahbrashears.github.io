@@ -118,7 +118,7 @@
         $('.top-left, .top-right, .bottom-left, .bottom-right').click(function () {
             if (playerPicks.join(',') === simonsPicks.join(',')) {
                 nextRound();
-            }else if(playerPicks.length > simonsPicks.length){
+            }else if(playerPicks.length === simonsPicks.length && playerPicks.join(',') !== simonsPicks.join()){
                 alert('game over')
             }
         })
