@@ -3,7 +3,7 @@ body{
 }
 
 .circle{
-
+    box-shadow: 1em .5em .5em .5em  #CCC;
     display: grid;
     margin: 0 auto;
     margin-top: 5em;
@@ -146,9 +146,9 @@ body{
 @media screen and (max-width:625px) {
 
     .circle {
-       background-color: white;
+        background-color: white;
         position: relative;
-
+        box-shadow: 1em .5em .5em .5em  white;
 
 
     }
