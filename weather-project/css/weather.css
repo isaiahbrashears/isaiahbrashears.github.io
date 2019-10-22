@@ -26,7 +26,7 @@
     display: none;
 }
 
- .mapboxgl-ctrl-geocoder--icon-search{
+.mapboxgl-ctrl-geocoder--icon-search{
     display: none;
 }
 
@@ -36,7 +36,7 @@
 }
 
 .card-body{
-    height: 15em;
+    height: 18em;
 
 }
 
@@ -59,7 +59,7 @@
     width: 80%;
     margin: 0 auto;
     margin-bottom: .2em;
-    height: 275px;
+    height: 320px;
     background-color: #3B94D9;
 }
 
@@ -141,20 +141,47 @@ header #time{
     background-color: #202020;
 }
 
-@media screen and (max-width:1080px) {
+@media screen and (max-width:1021px) {
 
-    .heading{display: none}
+
+    header .heading{
+        position: absolute;
+        left: calc(50% + (-184.25px));
+        line-height: 110px;
+        font-size: 3em;
+    }
+
+    header #date{
+        padding: 2em;
+        line-height: 5.5em;
+        margin-rigth: auto;
+        font-size: 1.3em;
+    }
+
+    header #time{
+        padding: 2em;
+        line-height: 5.5em;
+        margin-left: auto;
+        font-size: 1.3em;
+    }
+
 
 }
 
-@media screen and (max-width:574px) {
-    .col-sm-4:nth-of-type(2){
+@media screen and (max-width:574px){
+    #threeDayForecast .col-sm-4:nth-of-type(2){
         display: none;
     }
 
-    .col-sm-4:nth-of-type(3){
+    #threeDayForecast .col-sm-4:nth-of-type(3){
         display: none;
     }
 
+}
+
+@media screen and (max-width:430px){
+    .heading{
+        display: none;
+    }
 
 }

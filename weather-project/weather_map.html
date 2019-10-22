@@ -20,7 +20,7 @@
 </header>
 <h3 id="city"> SAN ANTONIO, TX</h3>
 <div id="threeDayForecast" class="row"></div>
-<div id="mapContainer" >
+<div id="mapContainer">
     <div id="map"></div>
 
 </div>
@@ -35,203 +35,206 @@
 <script src="js/keys.js"></script>
 <script src="js/mapbox-utils.js"></script>
 <script>
-"use strict";
-(function () {
+    "use strict";
+    (function () {
 
-    console.log(mapboxToken);
+        //STARTS MAP AT SAN ANTONIO
 
-    //STARTS MAP AT SAN ANTONIO
+        var weatherLocation = '29.4241, -98.4936';
+        mapboxgl.accessToken = mapboxToken;
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v9',
+            zoom: 10,
+            center: [-98.4936, 29.4241]
 
-    var weatherLocation = '29.4241, -98.4936';
-    mapboxgl.accessToken = mapboxToken;
-    var map = new mapboxgl.Map({
-        container: 'map',
-        style: 'mapbox://styles/mapbox/streets-v9',
-        zoom: 10,
-        center: [-98.4936, 29.4241]
-
-    });
-
-
-
-    //DATE AND TIME
-
-    var today = new Date().toDateString();
-    var time = new Date().toLocaleTimeString();
-    $('#date').html(today);
-    $('#time').html(time);
-
-    setInterval(function () {
-        time = new Date().toLocaleTimeString();
-        var hour = new Date().getHours();
-        $('#time').html(time);
-        if(hour >= 20){
-            $('body').addClass('nightmode');
-            map.setStyle('mapbox://styles/mapbox/dark-v10');
-        }
-
-    }, 500);
-
-    //STARTS MARKER AT SAN ANTONIO
-
-    var marker = new mapboxgl.Marker({
-        draggable: true
-    })
-        .setLngLat([-98.4936, 29.4241])
-        .addTo(map);
-
-
-    //STARTS WEATHER FORECAST AT SAN ANTONIO
-
-  var ajaxStuff = function() {
-      $.get("https://cors-anywhere.herokuapp.com/https://api.darksky.net/forecast/" + darkSkyKey + '/' + weatherLocation).done(function (data) {
-
-          $('#threeDayForecast').html('');
-
-          //THREE DAY FORECAST
-
-          for (var i = 0; i < 3; i++) {
-              var day = data.daily.data[i];
-
-              //DECIDES WHAT ICON TO USE
-
-              function whatIcon(day) {
-                  var iconToUse;
-                  if (day.icon === 'clear-day') {
-                      iconToUse = '<img src="icon/sunny.png" height="100" width="100"/>'
-                  } else if (day.icon === 'clear-night') {
-                      iconToUse = '<img src="icon/moon.png" height="100" width="100"/>'
-                  } else if (day.icon === 'partly-cloudy-day') {
-                      iconToUse = '<img src="icon/partly-cloudy-day.png" height="100" width="100"/>'
-                  } else if (day.icon === 'partly-cloudy-night') {
-                      iconToUse = '<img src="icon/partly-cloudy-night.png" height="100" width="100"/>'
-                  } else if (day.icon === 'cloudy') {
-                      iconToUse = '<img src="icon/cloudy.png" height="100" width="100"/>'
-                  } else if (day.icon === 'rain') {
-                      iconToUse = '<img src="icon/rain.png" height="100" width="100"/>'
-                  } else if (day.icon === 'sleet') {
-                      iconToUse = '<img src="icon/sleet.png" height="100" width="100"/>'
-                  } else if (day.icon === 'snow') {
-                      iconToUse = '<img src="icon/snow.png" height="100" width="100"/>'
-                  } else if (day.icon === 'wind') {
-                      iconToUse = '<img src="icon/wind.png" height="100" width="100"/>'
-                  } else if (day.icon === 'fog') {
-                      iconToUse = '<img src="icon/fog.png" height="100" width="100"/>'
-                  }
-
-                  return iconToUse;
-              }
-
-              var icon = whatIcon(day);
-
-              //UPDATES HTML WITH THREE DAY FORECAST
-
-              $('#threeDayForecast').append(
-                  '<div class="col-sm-4">' +
-                  '   <div class="card">' +
-                  '       <div class="card-body">' +
-                  '           <h5 class="card-title">' + day.apparentTemperatureHigh.toFixed(0) + '°' + '/' + day.apparentTemperatureLow.toFixed(0) + '°' + '</h5>' +
-                  '           <span>' + icon + '</span>' +
-                  '           <ul>' +
-                  '              <li>' + 'Humidity: ' + day.humidity + '</li>' +
-                  '              <li>' + 'Wind: ' + day.windGust + '</li>' +
-                  '              <li>' + 'Pressure: ' + day.pressure + '</li> ' +
-                  '           </ul>' +
-                  '       </div>' +
-                  '   </div>' +
-                  '</div>'
-              );
-          }
-      });
-  }
-  ajaxStuff();
-
-    //CHANGES WHEN MARKER MOVES
-
-    function onDragEnd() {
-        var coordinates = marker.getLngLat();
-        var latitude = coordinates.lat;
-        var longitude = coordinates.lng;
-        var weatherLocation = latitude + ',' + longitude;
-
-        reverseGeocode(coordinates , mapboxToken).then(function (result) {
-            $('#city').html(result.toUpperCase());
         });
 
-        $.get("https://cors-anywhere.herokuapp.com/https://api.darksky.net/forecast/"+ darkSkyKey + '/'+ weatherLocation).done(function (data) {
+        //DATE AND TIME
 
-            $('#threeDayForecast').html('');
+        var today = new Date().toDateString();
+        var time = new Date().toLocaleTimeString();
+        $('#date').html(today);
+        $('#time').html(time);
 
-            //THREE DAY FORECAST
+        setInterval(function () {
+            time = new Date().toLocaleTimeString();
+            var hour = new Date().getHours();
+            console.log(hour);
+            $('#time').html(time);
+            if(hour >= 20){
+                $('body').addClass('nightmode');
+                map.setStyle('mapbox://styles/mapbox/dark-v10');
+            }
 
-            for (var i = 0; i < 3; i++){
-                var day = data.daily.data[i];
+        }, 1000);
 
-                //DECIDES WHAT ICON TO USE
+        //STARTS MARKER AT SAN ANTONIO
 
-                function whatIcon(day){
-                    var iconToUse;
-                    if (day.icon === 'clear-day'){
-                        iconToUse = '<img src="icon/sunny.png" height="100" width="100"/>'
-                    } else if(day.icon === 'clear-night'){
-                        iconToUse = '<img src="icon/moon.png" height="100" width="100"/>'
-                    }else if(day.icon === 'partly-cloudy-day'){
-                        iconToUse = '<img src="icon/partly-cloudy-day.png" height="100" width="100"/>'
-                    }else if(day.icon === 'partly-cloudy-night'){
-                        iconToUse = '<img src="icon/partly-cloudy-night.png" height="100" width="100"/>'
-                    }else if (day.icon === 'cloudy'){
-                        iconToUse = '<img src="icon/cloudy.png" height="100" width="100"/>'
-                    }else if (day.icon === 'rain'){
-                        iconToUse = '<img src="icon/rain.png" height="100" width="100"/>'
-                    }else if (day.icon === 'sleet'){
-                        iconToUse = '<img src="icon/sleet.png" height="100" width="100"/>'
-                    }else if (day.icon === 'snow'){
-                        iconToUse = '<img src="icon/snow.png" height="100" width="100"/>'
-                    }else if (day.icon === 'wind'){
-                        iconToUse = '<img src="icon/wind.png" height="100" width="100"/>'
-                    }else if (day.icon === 'fog'){
-                        iconToUse = '<img src="icon/fog.png" height="100" width="100"/>'
+        var marker = new mapboxgl.Marker({
+            draggable: true
+        })
+            .setLngLat([-98.4936, 29.4241])
+            .addTo(map);
+
+
+        //STARTS WEATHER FORECAST AT SAN ANTONIO
+
+        var ajaxStuff = function() {
+            $.get("https://cors-anywhere.herokuapp.com/https://api.darksky.net/forecast/" + darkSkyKey + '/' + weatherLocation).done(function (data) {
+
+                $('#threeDayForecast').html('');
+
+                //THREE DAY FORECAST
+
+                for (var i = 0; i < 3; i++) {
+                    var day = data.daily.data[i];
+
+                    var dateObject = new Date((day.time) * 1000);
+
+                    dateObject = dateObject.toDateString();
+
+                    dateObject = dateObject.slice(0, 10);
+
+                    //DECIDES WHAT ICON TO USE
+
+                    function whatIcon(day) {
+                        var iconToUse;
+                        if (day.icon === 'clear-day') {
+                            iconToUse = '<img src="icon/sunny.png" height="100" width="100"/>'
+                        } else if (day.icon === 'clear-night') {
+                            iconToUse = '<img src="icon/moon.png" height="100" width="100"/>'
+                        } else if (day.icon === 'partly-cloudy-day') {
+                            iconToUse = '<img src="icon/partly-cloudy-day.png" height="100" width="100"/>'
+                        } else if (day.icon === 'partly-cloudy-night') {
+                            iconToUse = '<img src="icon/partly-cloudy-night.png" height="100" width="100"/>'
+                        } else if (day.icon === 'cloudy') {
+                            iconToUse = '<img src="icon/cloudy.png" height="100" width="100"/>'
+                        } else if (day.icon === 'rain') {
+                            iconToUse = '<img src="icon/rain.png" height="100" width="100"/>'
+                        } else if (day.icon === 'sleet') {
+                            iconToUse = '<img src="icon/sleet.png" height="100" width="100"/>'
+                        } else if (day.icon === 'snow') {
+                            iconToUse = '<img src="icon/snow.png" height="100" width="100"/>'
+                        } else if (day.icon === 'wind') {
+                            iconToUse = '<img src="icon/wind.png" height="100" width="100"/>'
+                        } else if (day.icon === 'fog') {
+                            iconToUse = '<img src="icon/fog.png" height="100" width="100"/>'
+                        }
+
+                        return iconToUse;
                     }
 
-                    return iconToUse;
+                    var icon = whatIcon(day);
+
+                    //UPDATES HTML WITH THREE DAY FORECAST
+
+                    $('#threeDayForecast').append(
+                        '<div class="col-sm-4">' +
+                        '   <div class="card">' +
+                        '       <div class="card-body">' +
+                        '           <h5 class="card-title">'+ dateObject +  `<br>`+ day.apparentTemperatureHigh.toFixed(0) + '°' + '/' + day.apparentTemperatureLow.toFixed(0) + '°' + '</h5>' +
+                        '           <span>' + icon + '</span>' +
+                        '           <ul>' +
+                        '              <li>' + 'Humidity: ' + day.humidity + '</li>' +
+                        '              <li>' + 'Wind: ' + day.windGust + '</li>' +
+                        '              <li>' + 'Pressure: ' + day.pressure + '</li> ' +
+                        '           </ul>' +
+                        '       </div>' +
+                        '   </div>' +
+                        '</div>'
+                    );
                 }
+            });
+        }
+        ajaxStuff();
 
-                var icon = whatIcon(day);
+        //CHANGES WHEN MARKER MOVES
 
-                //UPDATES HTML WITH THREE DAY FORECAST
+        function onDragEnd() {
+            var coordinates = marker.getLngLat();
+            var latitude = coordinates.lat;
+            var longitude = coordinates.lng;
+            var weatherLocation = latitude + ',' + longitude;
 
-                $('#threeDayForecast').append(
-                    '<div class="col-sm-4">' +
-                    '   <div class="card">' +
-                    '       <div class="card-body">' +
-                    '           <h5 class="card-title">' + day.apparentTemperatureHigh.toFixed(0) + '°' + '/' + day.apparentTemperatureLow.toFixed(0) + '°' + '</h5>' +
-                    '           <span>' + icon + '</span>' +
-                    '           <ul>' +
-                    '              <li>' + 'Humidity: ' + day.humidity + '</li>' +
-                    '              <li>' + 'Wind: ' + day.windGust + '</li>' +
-                    '              <li>' + 'Pressure: ' + day.pressure + '</li> ' +
-                    '           </ul>' +
-                    '       </div>' +
-                    '   </div>' +
-                    '</div>'
-                );
-            }
+            reverseGeocode(coordinates , mapboxToken).then(function (result) {
+                $('#city').html(result.toUpperCase());
+            });
+
+            $.get("https://cors-anywhere.herokuapp.com/https://api.darksky.net/forecast/"+ darkSkyKey + '/'+ weatherLocation).done(function (data) {
+
+                $('#threeDayForecast').html('');
+
+                //THREE DAY FORECAST
+
+                for (var i = 0; i < 3; i++){
+                    var day = data.daily.data[i];
+
+                    //DECIDES WHAT ICON TO USE
+
+                    function whatIcon(day){
+                        var iconToUse;
+                        if (day.icon === 'clear-day'){
+                            iconToUse = '<img src="icon/sunny.png" height="100" width="100"/>'
+                        } else if(day.icon === 'clear-night'){
+                            iconToUse = '<img src="icon/moon.png" height="100" width="100"/>'
+                        }else if(day.icon === 'partly-cloudy-day'){
+                            iconToUse = '<img src="icon/partly-cloudy-day.png" height="100" width="100"/>'
+                        }else if(day.icon === 'partly-cloudy-night'){
+                            iconToUse = '<img src="icon/partly-cloudy-night.png" height="100" width="100"/>'
+                        }else if (day.icon === 'cloudy'){
+                            iconToUse = '<img src="icon/cloudy.png" height="100" width="100"/>'
+                        }else if (day.icon === 'rain'){
+                            iconToUse = '<img src="icon/rain.png" height="100" width="100"/>'
+                        }else if (day.icon === 'sleet'){
+                            iconToUse = '<img src="icon/sleet.png" height="100" width="100"/>'
+                        }else if (day.icon === 'snow'){
+                            iconToUse = '<img src="icon/snow.png" height="100" width="100"/>'
+                        }else if (day.icon === 'wind'){
+                            iconToUse = '<img src="icon/wind.png" height="100" width="100"/>'
+                        }else if (day.icon === 'fog'){
+                            iconToUse = '<img src="icon/fog.png" height="100" width="100"/>'
+                        }
+
+                        return iconToUse;
+                    }
+
+                    var icon = whatIcon(day);
+
+                    //UPDATES HTML WITH THREE DAY FORECAST
+
+                    $('#threeDayForecast').append(
+                        '<div class="col-sm-4">' +
+                        '   <div class="card">' +
+                        '       <div class="card-body">' +
+                        '           <h5 class="card-title">' + day.apparentTemperatureHigh.toFixed(0) + '°' + '/' + day.apparentTemperatureLow.toFixed(0) + '°' + '</h5>' +
+                        '           <span>' + icon + '</span>' +
+                        '           <ul>' +
+                        '              <li>' + 'Humidity: ' + day.humidity + '</li>' +
+                        '              <li>' + 'Wind: ' + day.windGust + '</li>' +
+                        '              <li>' + 'Pressure: ' + day.pressure + '</li> ' +
+                        '           </ul>' +
+                        '       </div>' +
+                        '   </div>' +
+                        '</div>'
+                    );
+                }
+            });
+        }
+
+        marker.on('dragend', onDragEnd);
+
+        //UPDATES MAP AND CITY NAME BY SEARCHING
+
+        var geocoder = new MapboxGeocoder({
+            accessToken: mapboxToken,
+            mapboxgl: mapboxgl,
+            mapMarker: null
         });
-    }
 
-    marker.on('dragend', onDragEnd);
+        document.getElementById('geocoder').append(geocoder.onAdd(map));
 
-    //UPDATES MAP AND CITY NAME BY SEARCHING
-
-    var geocoder = new MapboxGeocoder({
-        accessToken: mapboxToken,
-        mapboxgl: mapboxgl,
-        mapMarker: null
-    });
-
-    document.getElementById('geocoder').append(geocoder.onAdd(map));
-
-    $('#geocoder').change(function (e) {
+        $('#geocoder').change(function (e) {
             geocoder.mapMarker.remove();
             var location = geocoder.inputString;
             console.log(geocoder);
@@ -243,11 +246,10 @@
 
                 ajaxStuff();
             });
-    });
+        });
 
-})();
+    })();
 
 </script>
 
 </body>
-</html>
