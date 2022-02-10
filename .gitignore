@@ -1,3 +1,7 @@
 *.iml
 .idea/*
 keys.js
+node_modules/*
+.vscode/*
+public/main.js
+*.map
