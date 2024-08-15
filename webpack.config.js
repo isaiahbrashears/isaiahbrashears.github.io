@@ -17,7 +17,15 @@ module.exports = {
         },
       },
       {
-        test: /\.css$/,
+        test: /\.scss$/,  // Add this rule to handle SCSS files
+        use: [
+          'style-loader', // Injects styles into DOM
+          'css-loader',   // Turns CSS into CommonJS
+          'sass-loader',  // Compiles Sass to CSS
+        ],
+      },
+      {
+        test: /\.css$/,  // Add this rule to handle CSS files
         use: ['style-loader', 'css-loader'],
       },
     ],
@@ -34,5 +42,4 @@ module.exports = {
     compress: true,
     port: 9000,
   },
-
 };
