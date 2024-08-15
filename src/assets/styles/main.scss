@@ -1,0 +1,13 @@
+@import 'variables';
+@import 'common';
+
+body {
+  font-family: 'Arial, sans-serif';
+  background-color: $background;
+  color: $text-color;
+}
+
+.wizard-container {
+  max-width: 50rem;
+  margin: auto;
+}
