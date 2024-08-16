@@ -2,12 +2,25 @@
 @import 'common';
 
 body {
-  font-family: 'Arial, sans-serif';
+  font-family: 'Courier';
   background-color: $background;
   color: $text-color;
 }
 
 .wizard-container {
+  padding: 2rem;
+  padding-top: 10rem;
   max-width: 50rem;
   margin: auto;
+
+  .step-one {
+    .fade-in {
+      opacity: 0;
+      transition: opacity 5s ease-in-out; /* Adjust the duration as needed */
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+    }
+  }
 }
