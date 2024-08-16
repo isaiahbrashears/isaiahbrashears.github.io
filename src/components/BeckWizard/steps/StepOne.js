@@ -15,7 +15,7 @@ const StepOne = ({ changeStep }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInput(!showInput);
-    }, 1000); // Adjust the delay as needed
+    }, 7000); // Adjust the delay as needed
 
     return () => clearTimeout(timer);
   }, [hideInput]);
@@ -54,6 +54,14 @@ const StepOne = ({ changeStep }) => {
         setShowInput(true);
       }, 48000);
       return () => clearTimeout(timer);
+    } else {
+      setDisplayText(
+        [
+          "No one knows what you're trying to say.", 2000,
+          "No one knows what you're trying to say. Let's try again", 2000,
+          'Would you like to play a game?'
+        ])
+      setKey(prevKey => prevKey + 1)
     }
   }
 
