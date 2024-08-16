@@ -15,7 +15,7 @@ const StepOne = ({ changeStep }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInput(!showInput);
-    }, 1000); // Adjust the delay as needed
+    }, 7000); // Adjust the delay as needed
 
     return () => clearTimeout(timer);
   }, [hideInput]);
