@@ -16,7 +16,7 @@ body {
   .step-one {
     .fade-in {
       opacity: 0;
-      transition: opacity 5s ease-in-out; /* Adjust the duration as needed */
+      transition: opacity 3s ease-in-out; /* Adjust the duration as needed */
     }
 
     .fade-in.visible {
