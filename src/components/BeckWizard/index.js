@@ -7,7 +7,7 @@ const BeckWizard = () => {
 
   const steps = {
     1: <StepOne changeStep={setWizardPage} />,
-    2: <StepTwo changeStep={setWizardPage} />,
+    // 1: <StepTwo changeStep={setWizardPage} />,
   }
 
   return steps[wizardPage];
