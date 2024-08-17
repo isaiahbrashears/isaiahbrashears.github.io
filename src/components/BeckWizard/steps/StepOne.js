@@ -25,7 +25,7 @@ const StepOne = ({ changeStep }) => {
   };
 
   const handleSubmit = () => {
-    if (affirmativeAnswers.includes(inputText)) {
+    if (affirmativeAnswers.includes(inputText.toLowerCase())) {
       setDisplayText(["Okay, let's get started."])
       setKey(prevKey => prevKey + 1)
       const timer = setTimeout(() => {
@@ -34,7 +34,7 @@ const StepOne = ({ changeStep }) => {
       return () => clearTimeout(timer);
     }
 
-    if (negativeAnswers.includes(inputText)) {
+    if (negativeAnswers.includes(inputText.toLowerCase())) {
       setHideInput(true)
       setDisplayText(
         [
@@ -43,14 +43,14 @@ const StepOne = ({ changeStep }) => {
           'Was it because you saw me call you "Becca"?', 4000,
           'Seriously?', 3000,
           'It was a mistake and I fixed it.', 3000,
-          "Sorry I'm not perfect", 4000,
+          "Sorry I'm not perfect.", 4000,
           "Can we just start over?", 4000,
           'Hello BECKY.', 2000,
           'Would you like to play a game?',
         ])
       setKey(prevKey => prevKey + 1)
+      setInputText('');
       const timer = setTimeout(() => {
-        setInputText('');
         setShowInput(true);
       }, 48000);
       return () => clearTimeout(timer);
