@@ -6,14 +6,15 @@ const StepTwo = ({ changeStep }) => {
   const [crypticText, setCrypticText] = useState(true);
   const sentence = 'the complex murderer swiftly grabbed a hazy knife to fix a quivering broken jaw';
   const crypticSentence = 'ム¥ɖ ӄጀ山ᐸ¤ɖ๏ 山の爪ֆɖ爪ɖ爪 ズ℘𝔶รム¤ᘻ 乂爪ɮɨɨɖֆ ɮ ¥ɮᗱᘻ 千尺𝔶รɖ ムጀ ร𝔶๏ ɮ ʄの𝔶ﾘɖ爪𝔶尺乂 ɨ爪ጀ千ɖ尺 ๔ɮ℘';
-  const translateText = 'translate';
-  const translateCrypticText = 'ム爪ɮ尺ズ¤ɮムɖ';
+  let translateText = 'translate';
+  if (crypticText) {
+    translateText = 'ム爪ɮ尺ズ¤ɮムɖ';
+  }
+
   const [displayText, setDisplayText] = useState([crypticSentence]);
-  const [translateBtnText, setTranslateBtnText] = useState(translateCrypticText);
   const [key, setKey] = useState(0);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
-
 
   const textKey = {
     a: 'ɮ',
@@ -44,6 +45,22 @@ const StepTwo = ({ changeStep }) => {
     z: 'ᗱ',
   };
 
+  const password = 'password'
+
+  const passwordEncryptor = () => {
+    const passwordArr = [];
+    for (let index = 0; index < password.length; index++) {
+      if (password[index] === ' ') {
+        passwordArr.push(' ');
+      }
+      passwordArr.push(textKey[password[index]]);
+    }
+    const passwordStr = passwordArr.join('');
+    console.log(passwordStr);
+  }
+
+  // passwordEncryptor();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInput(!showInput);
@@ -55,17 +72,14 @@ const StepTwo = ({ changeStep }) => {
   const handleTranslate = () => {
     const nextCrypticText = !crypticText;
     let displaySentence = sentence;
-    let nextTranslateBtnText = translateText;
 
     if (nextCrypticText) {
       displaySentence = crypticSentence;
-      nextTranslateBtnText = translateCrypticText;
     }
 
-    setTranslateBtnText(nextTranslateBtnText)
-    setCrypticText(nextCrypticText); // Update state with the new value
-    setDisplayText([displaySentence]); // Update display text
-    setKey(prevKey => prevKey + 1); // Trigger re-render
+    setCrypticText(nextCrypticText);
+    setDisplayText([displaySentence]);
+    setKey(prevKey => prevKey + 1);
   };
 
   const handleInputChange = (value) => {
@@ -73,7 +87,18 @@ const StepTwo = ({ changeStep }) => {
   };
 
   const handleSubmit = () => {
+    if (inputText.toLowerCase() === password) {
+      setDisplayText(["password accepted.", 2000, "password accepted. ֆɖӄ𝔶ᐸ¥ɖ爪𝔶尺乂 ム¥𝔶ズ 𝔶ズ ɮ ℘ɮズムɖ ጀร ム𝔶山ɖ"])
+      setKey(prevKey => prevKey + 1)
+      const timer = setTimeout(() => {
+        changeStep(3);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
 
+    setDisplayText(["incorrect password.", 2000, crypticSentence])
+    setKey(prevKey => prevKey + 1)
+    setCrypticText(true);
   }
 
   const handleKeyDown = (event) => {
@@ -99,7 +124,7 @@ const StepTwo = ({ changeStep }) => {
       />
       <div className={`mt-8 fade-in ${showInput ? 'visible' : ''}`}>
         <div className="my-4">
-          <button onClick={handleTranslate}>{translateBtnText}</button>
+          <button onClick={handleTranslate}>{translateText}</button>
         </div>
         <input
           type="text"
