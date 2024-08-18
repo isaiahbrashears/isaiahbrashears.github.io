@@ -23,4 +23,49 @@ body {
       opacity: 1;
     }
   }
+
+  .step-three {
+    .lock-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      .lock-box {
+        max-width: 4rem;
+
+        .lock {
+          max-width: 100%;
+        }
+      }
+
+      &.active-1 {
+        .lock-1 {
+          max-width: 4.5rem;
+          path {
+            fill: lighten($text-color, 10%);
+          }
+
+        }
+      }
+
+      &.active-2 {
+        .lock-2 {
+          max-width: 4.5rem;
+          path {
+            fill: lighten($text-color, 10%);
+          }
+
+        }
+      }
+
+      &.active-3 {
+        .lock-3 {
+          max-width: 4.5rem;
+          path {
+            fill: lighten($text-color, 10%);
+          }
+
+        }
+      }
+    }
+  }
 }

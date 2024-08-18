@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
   entry: './src/index.js',
   output: {
-    path: path.resolve(__dirname, 'build'), // Ensure this is 'build'
+    path: path.resolve(__dirname, 'build'),
     filename: 'bundle.js',
   },
   module: {
@@ -17,7 +17,7 @@ module.exports = {
         },
       },
       {
-        test: /\.scss$/,  // Add this rule to handle SCSS files
+        test: /\.scss$/,  // Rule to handle SCSS files
         use: [
           'style-loader', // Injects styles into DOM
           'css-loader',   // Turns CSS into CommonJS
@@ -25,8 +25,12 @@ module.exports = {
         ],
       },
       {
-        test: /\.css$/,  // Add this rule to handle CSS files
+        test: /\.css$/,  // Rule to handle CSS files
         use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.svg$/,  // Rule to handle SVG files
+        use: ['@svgr/webpack'],
       },
     ],
   },
