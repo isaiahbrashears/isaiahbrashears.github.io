@@ -4,7 +4,7 @@ import { TypeAnimation } from 'react-type-animation';
 
 const StepThree = ({ changeStep }) => {
 
-  const [displayText, setDisplayText] = useState(['phase 3']);
+  const [displayText, setDisplayText] = useState(["What's the first color of Boston"]);
   const [key, setKey] = useState(0);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
@@ -46,6 +46,9 @@ const StepThree = ({ changeStep }) => {
         }}
         repeat={0}
       />
+      <div className="li">
+
+      </div>
       <div className={`mt-8 fade-in ${showInput ? 'visible' : ''}`}>
         <input
           type="text"
