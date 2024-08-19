@@ -86,6 +86,7 @@ const StepOne = ({ changeStep }) => {
           type="text"
           onChange={(event) => handleInputChange(event.target.value)}
           onKeyDown={handleKeyDown}
+          value={inputText}
         />
       </div>
     </div>

@@ -45,19 +45,20 @@ const StepTwo = ({ changeStep }) => {
     z: 'ᗱ',
   };
 
-  const password = 'password'
+  const password = 'the password is this sentence'
 
-  const passwordEncryptor = () => {
-    const passwordArr = [];
-    for (let index = 0; index < password.length; index++) {
-      if (password[index] === ' ') {
-        passwordArr.push(' ');
-      }
-      passwordArr.push(textKey[password[index]]);
-    }
-    const passwordStr = passwordArr.join('');
-    console.log(passwordStr);
-  }
+  // let passwordStr;
+  // const passwordEncryptor = () => {
+  //   const passwordArr = [];
+  //   for (let index = 0; index < password.length; index++) {
+  //     if (password[index] === ' ') {
+  //       passwordArr.push(' ');
+  //     }
+  //     passwordArr.push(textKey[password[index]]);
+  //   }
+  //   passwordStr = passwordArr.join('');
+  //   console.log(passwordStr);
+  // }
 
   // passwordEncryptor();
 
