@@ -59,7 +59,10 @@ const StepThree = ({ changeStep }) => {
       setlockTrial(4);
       setShowInput(false);
       setDisplayText(['Congratulations!',1000, 'Congratulations! Collect your reward.'])
-      return;
+      const timer = setTimeout(() => {
+        changeStep(4);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
     if (inputText.toLowerCase() === 'violet') {
       setDisplayText(['No.', 1000, 'This is the SECOND color of Boston'])

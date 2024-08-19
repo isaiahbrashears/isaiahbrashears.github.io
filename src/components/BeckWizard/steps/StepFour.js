@@ -1,5 +1,5 @@
-/* eslint-disable react/prop-types */
 import React, { useState, useEffect } from 'react';;
+import QRCode from '../../../assets/images/link-qr.svg';
 
 const StepFour = () => {
   const [showQR, setShowQR] = useState(false);
@@ -7,7 +7,7 @@ const StepFour = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowQR(!showQR);
-    }, 2000);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -16,8 +16,8 @@ const StepFour = () => {
 
   return (
     <div className="text-center step-four">
-      <div className={`mt-8 fade-in ${showQR ? 'visible' : ''}`}>
-
+      <div className={`fade-in ${showQR ? 'visible' : ''}`}>
+        <QRCode className="qr-code"/>
       </div>
     </div>
   );
