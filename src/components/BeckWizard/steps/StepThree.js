@@ -10,9 +10,10 @@ import OpenLock from '../../../assets/images/lock-open.svg';
 
 const StepThree = ({ changeStep }) => {
 
-  const [displayText, setDisplayText] = useState(["One dancer comes first"]);
+  const [displayText, setDisplayText] = useState(["This is the hip hoppiest dancer in the game"]);
   const [key, setKey] = useState(0);
-  const [lockTrial, setlockTrial] = useState(3);
+  const [lockTrial, setlockTrial] = useState(1);
+  const [attempt, setAttempt] = useState(1);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
 
@@ -30,9 +31,54 @@ const StepThree = ({ changeStep }) => {
     setInputText(value);
   };
 
-  const handleSubmit = () => {
+  const handleTrialOneSubmit = () => {
+    setKey(prevKey => prevKey + 1)
+    if (['raygun', 'ray gun'].includes(inputText.toLowerCase())) {
+      setAttempt(1);
+      setlockTrial(2);
+      setDisplayText(['That is correct', 2000, 'This is the first color of Boston'])
+      return;
+    }
+    setDisplayText(['incorrect.', 1000, 'incorrect. come on.', 1000, 'This is the hip hoppiest dancer in the game'])
+  };
 
+  const handleTrialTwoSubmit = () => {
+    setKey(prevKey => prevKey + 1)
+    if (inputText.toLowerCase() === 'violet') {
+      setAttempt(1);
+      setlockTrial(3);
+      setDisplayText(['That is correct', 2000, 'This is the second color of Boston'])
+      return;
+    }
+    setDisplayText(['incorrect.', 1000, 'This is the first color of Boston'])
+  };
+
+  const handleTrialThreeSubmit = () => {
+    setKey(prevKey => prevKey + 1)
+    if (inputText.toLowerCase() === 'pink') {
+      setlockTrial(4);
+      setShowInput(false);
+      setDisplayText(['Congratulations!',1000, 'Congratulations! Collect your reward.'])
+      return;
+    }
+    if (inputText.toLowerCase() === 'violet') {
+      setDisplayText(['No.', 1000, 'This is the SECOND color of Boston'])
+      return;
+    }
+    setDisplayText(['incorrect.', 1000, 'This is the second color of Boston'])
+  };
+
+  const trialSubmits = {
+    1: handleTrialOneSubmit,
+    2: handleTrialTwoSubmit,
+    3: handleTrialThreeSubmit,
   }
+
+  const handleSubmit = async () => {
+    setInputText('');
+    setAttempt(attempt + 1);
+    trialSubmits[lockTrial]();
+  };
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
@@ -41,20 +87,46 @@ const StepThree = ({ changeStep }) => {
   };
 
   const closedLock = (
-    <ClosedLock className=" lock" />
+    <ClosedLock className="lock" />
   )
+
+  const showHint = attempt > 2;
 
   let lockOne = (
     closedLock
   )
 
+  if (lockTrial === 1 && showHint) {
+    lockOne = <RooLock className="lock"/>;
+  }
+
+  if (lockTrial > 1) {
+    lockOne = <OpenLock className="lock"/>;
+  }
+
   let lockTwo = (
     closedLock
   )
 
+  if (lockTrial === 2 && showHint) {
+    lockTwo = <SpotifyLock className="lock"/>;
+  }
+
+  if (lockTrial > 2) {
+    lockTwo = <OpenLock className="lock"/>;
+  }
+
   let lockThree = (
     closedLock
   )
+
+  if (lockTrial === 3 && showHint) {
+    lockThree = <SweatLock className="lock"/>;
+  }
+
+  if (lockTrial > 3) {
+    lockThree = <OpenLock className="lock"/>;
+  }
 
   return (
     <div className="text-center step-three">
@@ -70,13 +142,13 @@ const StepThree = ({ changeStep }) => {
         repeat={0}
       />
       <div className={`lock-container mt-6 active-${lockTrial}`}>
-        <div className="lock-box lock-1">
+        <div className="lock-box mx-2 lock-1">
           {lockOne}
         </div>
-        <div className="lock-box lock-2">
+        <div className="lock-box mx-2 lock-2">
           {lockTwo}
         </div>
-        <div className="lock-box lock-3">
+        <div className="lock-box mx-2 lock-3">
           {lockThree}
         </div>
       </div>
@@ -86,6 +158,7 @@ const StepThree = ({ changeStep }) => {
           onChange={(event) => handleInputChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="enter password"
+          value={inputText}
         />
       </div>
     </div>
