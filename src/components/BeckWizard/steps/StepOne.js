@@ -26,7 +26,7 @@ const StepOne = ({ changeStep }) => {
 
   const handleSubmit = () => {
     if (affirmativeAnswers.includes(inputText.toLowerCase())) {
-      setDisplayText(["Okay, let's get started."])
+      setDisplayText(["It's nice to see you again."])
       setKey(prevKey => prevKey + 1)
       const timer = setTimeout(() => {
         changeStep(2);
