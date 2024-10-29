@@ -4,11 +4,10 @@ This repository contains the source code for [Your GitHub Pages Site](https://is
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
 - [Running Locally](#running-locally)
 - [Building and Deploying](#building-and-deploying)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Getting Started
 
@@ -29,16 +28,19 @@ Make sure you have the following software installed:
    ```bash
    git clone https://github.com/isaiahbrashears/isaiahbrashears.github.io.git
    cd isaiahbrashears.github.io
+   ```
 
 2. **Install dependencies:**
   ```bash
   npm install
+  ```
 
 ### Running Locally
 
 1. **Start the development server:**
   ```bash
   npm start
+  ```
 
 2. **Open your browser and navigate to http://localhost:9000. The app should now be running locally with hot reloading enabled.**
 
@@ -48,6 +50,7 @@ Make sure you have the following software installed:
   To create a production build of the project, run:
   ```bash
   npm run build
+  ```
 
 2. **Deploying to GitHub Pages**
 To deploy the project to GitHub Pages after making changes:
@@ -57,3 +60,4 @@ To deploy the project to GitHub Pages after making changes:
 2: Deploy to GitHub Pages:
   ```bash
   npm run deploy
+  ```
