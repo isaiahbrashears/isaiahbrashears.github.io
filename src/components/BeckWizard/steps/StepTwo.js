@@ -15,6 +15,7 @@ const StepTwo = ({ changeStep }) => {
   const [key, setKey] = useState(0);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
+  let viewCount = JSON.parse(localStorage.getItem('views'));
 
   const textKey = {
     a: 'ɮ',
@@ -133,6 +134,7 @@ const StepTwo = ({ changeStep }) => {
           onKeyDown={handleKeyDown}
           placeholder="enter password"
         />
+        <h3>{viewCount}</h3>
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 import React from 'react';
 import '../assets/styles/main.scss';
+import BeckWizard from './BeckWizard';
 
 const App = () => {
   return (
-    <div>
-      <h1>New Project</h1>
+    <div className="wizard-container" >
+      <BeckWizard />
     </div>
   );
 };
