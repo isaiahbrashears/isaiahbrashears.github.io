@@ -5,9 +5,9 @@ const LEAGUES = [
   { name: 'Legends', color: '#D3AF37', shortName: 'Legends', weight: 1, flag: '🏆✨' },
   { name: 'Ligue 1', color: '#0055A4', shortName: 'Ligue 1', weight: 7, flag: '🇫🇷' },
   { name: 'La Liga', color: '#ee8707', shortName: 'La Liga', weight: 7, flag: '🇪🇸' },
-  { name: 'USA', color: '#B22234', shortName: 'USA', weight: 1, flag: '🇺🇸' },
+  { name: 'MLS', color: '#B22234', shortName: 'MLS', weight: 1, flag: '🇺🇸' },
   { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, flag: '🇩🇪' },
-  { name: 'Rest of the World', color: '#16a085', shortName: 'Rest of World', weight: 1, flag: '🌍' },
+  { name: 'Rest of the World', color: '#000', shortName: 'Rest of World', weight: 1, flag: '🌍' },
   { name: 'Serie A', color: '#024494', shortName: 'Serie A', weight: 7, flag: '🇮🇹' }
 ];
 
@@ -141,16 +141,33 @@ const WheelComponent = () => {
           }}
         >
           <defs>
-            <pattern id="usaFlag" patternUnits="objectBoundingBox" width="1" height="1">
-              <image
-                href="Flag_of_the_United_States.svg"
-                x="0"
-                y="0"
-                width="300"
-                height="300"
-                preserveAspectRatio="xMidYMid slice"
-              />
-            </pattern>
+            <linearGradient
+              id="usaGradient"
+              gradientUnits="objectBoundingBox"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop offset="0%" style={{ stopColor: '#B22234', stopOpacity: 1 }} />
+              <stop offset="33%" style={{ stopColor: '#FFFFFF', stopOpacity: 1 }} />
+              <stop offset="66%" style={{ stopColor: '#3C3B6E', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#B22234', stopOpacity: 1 }} />
+            </linearGradient>
+            <linearGradient
+              id="goldGradient"
+              gradientUnits="objectBoundingBox"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop offset="0%" style={{ stopColor: '#FFD700', stopOpacity: 1 }} />
+              <stop offset="25%" style={{ stopColor: '#C0C0C0', stopOpacity: 1 }} />
+              <stop offset="50%" style={{ stopColor: '#FFFFFF', stopOpacity: 1 }} />
+              <stop offset="75%" style={{ stopColor: '#C0C0C0', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#FFD700', stopOpacity: 1 }} />
+            </linearGradient>
           </defs>
 
           {/* Outer border circle */}
@@ -162,7 +179,11 @@ const WheelComponent = () => {
             <g key={index}>
               <path
                 d={createSegmentPath(segment.startAngle, segment.endAngle)}
-                fill={segment.shortName === 'USA' ? 'url(#usaFlag)' : segment.color}
+                fill={
+                  segment.shortName === 'MLS' ? 'url(#usaGradient)' :
+                  segment.shortName === 'Legends' ? 'url(#goldGradient)' :
+                  segment.color
+                }
                 stroke="rgba(255, 255, 255, 0.5)"
                 strokeWidth="2"
               />
