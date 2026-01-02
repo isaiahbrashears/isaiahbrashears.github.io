@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const LEAGUES = [
-  { name: 'Premier League', color: '#38003c', shortName: 'EPL', weight: 7 },
-  { name: 'La Liga', color: '#ee8707', shortName: 'La Liga', weight: 7 },
-  { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7 },
-  { name: 'Serie A', color: '#024494', shortName: 'Serie A', weight: 7 },
-  { name: 'Rest of the World', color: '#16a085', shortName: 'Rest of World', weight: 6 },
-  { name: 'Legends', color: '#f39c12', shortName: 'Legends', weight: 1 } // Much smaller!
+  { name: 'Premier League', color: '#38003c', shortName: 'EPL', weight: 7, flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { name: 'Legends', color: '#D3AF37', shortName: 'Legends', weight: 1, flag: '🏆✨' },
+  { name: 'Ligue 1', color: '#0055A4', shortName: 'Ligue 1', weight: 7, flag: '🇫🇷' },
+  { name: 'La Liga', color: '#ee8707', shortName: 'La Liga', weight: 7, flag: '🇪🇸' },
+  { name: 'USA', color: '#B22234', shortName: 'USA', weight: 1, flag: '🇺🇸' },
+  { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, flag: '🇩🇪' },
+  { name: 'Rest of the World', color: '#16a085', shortName: 'Rest of World', weight: 1, flag: '🌍' },
+  { name: 'Serie A', color: '#024494', shortName: 'Serie A', weight: 7, flag: '🇮🇹' }
 ];
 
 const WheelComponent = () => {
@@ -134,6 +136,19 @@ const WheelComponent = () => {
             filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.3))'
           }}
         >
+          <defs>
+            <pattern id="usaFlag" patternUnits="objectBoundingBox" width="1" height="1">
+              <image
+                href="Flag_of_the_United_States.svg"
+                x="0"
+                y="0"
+                width="300"
+                height="300"
+                preserveAspectRatio="xMidYMid slice"
+              />
+            </pattern>
+          </defs>
+
           {/* Outer border circle */}
           <circle cx="150" cy="150" r="150" fill="#2c3e50" />
           <circle cx="150" cy="150" r="145" fill="none" />
@@ -143,7 +158,7 @@ const WheelComponent = () => {
             <g key={index}>
               <path
                 d={createSegmentPath(segment.startAngle, segment.endAngle)}
-                fill={segment.color}
+                fill={segment.shortName === 'USA' ? 'url(#usaFlag)' : segment.color}
                 stroke="rgba(255, 255, 255, 0.5)"
                 strokeWidth="2"
               />
@@ -161,6 +176,7 @@ const WheelComponent = () => {
                   transform={`
                     rotate(${segment.midAngle} 150 150)
                     translate(0 -88)
+                    rotate(90 150 150)
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -178,6 +194,7 @@ const WheelComponent = () => {
                   transform={`
                     rotate(${segment.midAngle} 150 150)
                     translate(0 -90)
+                    rotate(90 150 150)
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -217,7 +234,10 @@ const WheelComponent = () => {
           boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
           animation: 'fadeIn 0.5s ease-in'
         }}>
-          {winner === 'Legends' ? '🏆✨ LEGENDS! ✨🏆' : `🎉 ${winner}! 🎉`}
+          {winner === 'Legends'
+            ? '🏆✨ LEGENDS! ✨🏆'
+            : `${LEAGUES.find(l => l.name === winner)?.flag || '🎉'} ${winner}! ${LEAGUES.find(l => l.name === winner)?.flag || '🎉'}`
+          }
         </div>
       )}
 
