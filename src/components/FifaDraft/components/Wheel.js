@@ -17,6 +17,10 @@ const WheelComponent = () => {
   const [winner, setWinner] = useState(null);
   const animationRef = useRef(null);
 
+  // Check for jarrett query param
+  const isJarrettMode = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('jarrett') === 'true';
+
   // Calculate total weight and segment angles
   const totalWeight = LEAGUES.reduce((sum, league) => sum + league.weight, 0);
   const segments = LEAGUES.map((league, index) => {
@@ -234,9 +238,11 @@ const WheelComponent = () => {
           boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
           animation: 'fadeIn 0.5s ease-in'
         }}>
-          {winner === 'Legends'
-            ? '🏆✨ LEGENDS! ✨🏆'
-            : `${LEAGUES.find(l => l.name === winner)?.flag || '🎉'} ${winner}! ${LEAGUES.find(l => l.name === winner)?.flag || '🎉'}`
+          {isJarrettMode
+            ? '😐 Jarrett take a shot 😐'
+            : winner === 'Legends'
+              ? '🏆✨ LEGENDS! ✨🏆'
+              : `${LEAGUES.find(l => l.name === winner)?.flag || '🎉'} ${winner}! ${LEAGUES.find(l => l.name === winner)?.flag || '🎉'}`
           }
         </div>
       )}
