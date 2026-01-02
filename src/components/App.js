@@ -1,11 +1,11 @@
 import React from 'react';
 import '../assets/styles/main.scss';
-import BeckWizard from './BeckWizard';
+import FifaDraft from './FifaDraft';
 
 const App = () => {
   return (
     <div className="wizard-container" >
-      <BeckWizard />
+      <FifaDraft />
     </div>
   );
 };
