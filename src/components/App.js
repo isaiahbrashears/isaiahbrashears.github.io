@@ -6,7 +6,7 @@ import Jeopardy from './Jeopardy';
 
 const Home = () => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', alignItems: 'center', minHeight: '20vh' }}>
       <Link to="/fifa-draft" style={{
         padding: '16px 32px',
         fontSize: '18px',
@@ -41,6 +41,7 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/fifa-draft" element={<FifaDraft />} />
           <Route path="/jeopardy" element={<Jeopardy />} />
+          <Route path="/jeopardy/:playerName" element={<Jeopardy />} />
         </Routes>
       </div>
     </HashRouter>

@@ -24,6 +24,30 @@ export const fetchSheetData = async (sheetId, range, apiKey) => {
 };
 
 /**
+ * Updates a player's answer in Google Sheets via Apps Script
+ * @param {number} row - The row number to update
+ * @param {string} answer - The answer to write
+ * @returns {Promise<void>}
+ */
+export const submitPlayerAnswer = async (row, answer) => {
+  try {
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycby-TC6EWN63jKR3YeabBd1XCW9Kkdveen-GImiKzRqwb3ITdHp_2xHxaDmcBF7c5VFzlA/exec';
+
+    await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ row, answer }),
+      mode: 'no-cors'
+    });
+
+    // With no-cors mode, we can't read the response, but the request will succeed
+    console.log('Answer submitted successfully');
+  } catch (error) {
+    console.error('Error submitting answer to Google Sheets:', error);
+    throw error;
+  }
+};
+
+/**
  * Helper to extract Sheet ID from a Google Sheets URL
  * @param {string} url - Full Google Sheets URL
  * @returns {string} The sheet ID

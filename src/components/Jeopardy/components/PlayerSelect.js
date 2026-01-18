@@ -1,11 +1,13 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchSheetData } from "../../../utils/googleSheets";
 
-const PlayerSelect = ({ onPlayerSelected = () => {} }) => {
+const PlayerSelect = () => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   // Google Sheets configuration
   const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
@@ -33,7 +35,8 @@ const PlayerSelect = ({ onPlayerSelected = () => {} }) => {
   }, []);
 
   const handlePlayerClick = (player) => {
-    onPlayerSelected(player);
+    // Navigate to /jeopardy/{playerName}
+    navigate(`/jeopardy/${encodeURIComponent(player)}`);
   };
 
   if (loading) {
