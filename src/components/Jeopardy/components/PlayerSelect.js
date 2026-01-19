@@ -78,6 +78,24 @@ const PlayerSelect = () => {
             {player}
           </button>
         ))}
+        <button
+            onClick={() => handlePlayerClick('admin')}
+            style={{
+              padding: '16px 24px',
+              fontSize: '16px',
+              backgroundColor: '#6f1908ff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#8a0c0cff'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#e97406ff'}
+          >
+            Admin Portal
+          </button>
       </div>
     </div>
   );

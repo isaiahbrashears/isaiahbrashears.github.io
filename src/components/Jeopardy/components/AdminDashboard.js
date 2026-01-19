@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import { fetchAllPlayersWithScores, clearAllAnswers, fetchCurrentCategoryAndScore, updatePlayerScore, updateCellReferences, setFinalJeopardy } from "../../../utils/googleSheets";
+import { fetchAllPlayersWithScores, clearAllAnswers, fetchCurrentCategoryAndScore, updatePlayerScore, updateCellReferences, setFinalJeopardy, resetGame } from "../../../utils/googleSheets";
 
 const AdminDashboard = () => {
   const [players, setPlayers] = useState([]);
@@ -14,6 +14,8 @@ const AdminDashboard = () => {
   const [scoreCell, setScoreCell] = useState('A2');
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
+  const [isResettingGame, setIsResettingGame] = useState(false);
+  const [isTogglingFinalJeopardy, setIsTogglingFinalJeopardy] = useState(false);
 
   // Google Sheets configuration
   const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
@@ -170,6 +172,40 @@ const AdminDashboard = () => {
       ...prev,
       [playerRow]: isCorrect ? 'correct' : 'incorrect'
     }));
+  };
+
+  const handleResetGame = async () => {
+    if (!window.confirm('Are you sure you want to reset the game? This will clear all scores, answers, and wagers.')) {
+      return;
+    }
+
+    setIsResettingGame(true);
+    try {
+      await resetGame();
+      // Refresh data after reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      console.error('Error resetting game:', err);
+      alert('Failed to reset game. Please try again.');
+    } finally {
+      setIsResettingGame(false);
+    }
+  };
+
+  const handleToggleFinalJeopardy = async () => {
+    setIsTogglingFinalJeopardy(true);
+    try {
+      await setFinalJeopardy(!isFinalJeopardy);
+      // Update local state after successful toggle
+      setIsFinalJeopardy(!isFinalJeopardy);
+    } catch (err) {
+      console.error('Error toggling Final Jeopardy:', err);
+      alert('Failed to toggle Final Jeopardy. Please try again.');
+    } finally {
+      setIsTogglingFinalJeopardy(false);
+    }
   };
 
   return (
@@ -372,6 +408,54 @@ const AdminDashboard = () => {
         >
           {isResetting ? 'Submitting...' : 'Submit Answers'}
         </button>
+      </div>
+
+      {/* Game Controls Section */}
+      <div style={{
+        padding: '20px',
+        backgroundColor: '#f5f5f5',
+        borderRadius: '8px',
+        marginBottom: '30px'
+      }}>
+        <h3 style={{ marginTop: '0', marginBottom: '15px' }}>Game Controls</h3>
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleToggleFinalJeopardy}
+            disabled={isTogglingFinalJeopardy}
+            style={{
+              flex: '1',
+              minWidth: '200px',
+              padding: '12px 24px',
+              fontSize: '16px',
+              backgroundColor: isTogglingFinalJeopardy ? '#ccc' : (isFinalJeopardy ? '#f44336' : '#4caf50'),
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isTogglingFinalJeopardy ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            {isTogglingFinalJeopardy ? 'Updating...' : (isFinalJeopardy ? 'Exit Final Jeopardy' : 'Start Final Jeopardy')}
+          </button>
+          <button
+            onClick={handleResetGame}
+            disabled={isResettingGame}
+            style={{
+              flex: '1',
+              minWidth: '200px',
+              padding: '12px 24px',
+              fontSize: '16px',
+              backgroundColor: isResettingGame ? '#ccc' : '#ff5722',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isResettingGame ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            {isResettingGame ? 'Resetting...' : 'Reset Game'}
+          </button>
+        </div>
       </div>
     </div>
   );

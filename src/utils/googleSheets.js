@@ -275,3 +275,26 @@ export const setFinalJeopardy = async (isFinal) => {
     throw err;
   }
 };
+
+/**
+ * Resets the game by clearing all scores, answers, wagers, and resetting cell references
+ * @returns {Promise<void>}
+ */
+export const resetGame = async () => {
+  try {
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbx35za_dPo9AX6rBguULzz813eDCYYZuwJ6zqMezBnZ0yDs1Ize0dBzNcUfVBLOY3vUTQ/exec';
+
+    console.log('Sending reset game request...');
+
+    await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'resetGame' }),
+      mode: 'no-cors'
+    });
+
+    console.log('Reset game request sent successfully');
+  } catch (error) {
+    console.error('Error resetting game:', error);
+    throw error;
+  }
+};
