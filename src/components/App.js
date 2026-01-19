@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 import '../assets/styles/main.scss';
 import FifaDraft from './FifaDraft';
 import Jeopardy from './Jeopardy';
+import AdminDashboard from './Jeopardy/components/AdminDashboard';
 
 const Home = () => {
   return (
@@ -41,6 +42,7 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/fifa-draft" element={<FifaDraft />} />
           <Route path="/jeopardy" element={<Jeopardy />} />
+          <Route path="/jeopardy/admin" element={<AdminDashboard />} />
           <Route path="/jeopardy/:playerName" element={<Jeopardy />} />
         </Routes>
       </div>

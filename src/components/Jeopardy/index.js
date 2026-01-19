@@ -60,7 +60,7 @@ const Jeopardy = () => {
 
   // If player not found, show error
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
+    <div style={{ padding: '20px', textAlign: 'center' }} className="jeopardy">
       <p>Player not found</p>
       <PlayerSelect />
     </div>
