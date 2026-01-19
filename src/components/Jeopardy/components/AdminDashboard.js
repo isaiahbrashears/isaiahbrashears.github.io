@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import { fetchAllPlayersWithScores, clearAllAnswers, fetchCurrentCategoryAndScore, updatePlayerScore, updateCellReferences, resetGame } from "../../../utils/googleSheets";
+import { fetchAllPlayersWithScores, clearAllAnswers, fetchCurrentCategoryAndScore, updatePlayerScore, updateCellReferences, setFinalJeopardy } from "../../../utils/googleSheets";
 
 const AdminDashboard = () => {
   const [players, setPlayers] = useState([]);
@@ -8,12 +8,12 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [isResettingGame, setIsResettingGame] = useState(false);
   const [currentCategory, setCurrentCategory] = useState('');
   const [currentScore, setCurrentScore] = useState(0);
   const [categoryCell, setCategoryCell] = useState('A1');
   const [scoreCell, setScoreCell] = useState('A2');
   const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
 
   // Google Sheets configuration
   const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
@@ -33,6 +33,7 @@ const AdminDashboard = () => {
         setCurrentCategory(categoryAndScore.category);
         setCurrentScore(categoryAndScore.score);
         setCategoryCell(categoryAndScore.categoryCell);
+        setIsFinalJeopardy(categoryAndScore.isFinalJeopardy);
         setScoreCell(categoryAndScore.scoreCell);
         setError(null);
       } catch (err) {
@@ -121,8 +122,24 @@ const AdminDashboard = () => {
     try {
       // Submit scores for all correct answers
       const updatePromises = Object.entries(selectedAnswers).map(([row, status]) => {
-        if (status === 'correct') {
-          return updatePlayerScore(parseInt(row), currentScore);
+        const rowNum = parseInt(row);
+        if (isFinalJeopardy) {
+          // In Final Jeopardy, use wager amount from player data
+          const player = players.find(p => p.row === rowNum);
+          const wagerAmount = player?.wager || 0;
+          console.log('WAGER AMOUNT CHECK', wagerAmount);
+
+          if (status === 'correct') {
+            return updatePlayerScore(rowNum, wagerAmount);
+          } else if (status === 'incorrect') {
+            // Subtract wager for incorrect answers
+            return updatePlayerScore(rowNum, -wagerAmount);
+          }
+        } else {
+          // Regular questions: add currentScore for correct answers only
+          if (status === 'correct') {
+            return updatePlayerScore(rowNum, currentScore);
+          }
         }
         return Promise.resolve();
       });
@@ -155,28 +172,24 @@ const AdminDashboard = () => {
     }));
   };
 
-  const handleGameReset = async () => {
-    if (!window.confirm('Are you sure you want to reset the entire game? This will clear all scores and answers.')) {
-      return;
-    }
-
-    setIsResettingGame(true);
-    try {
-      await resetGame();
-      setShowAnswers(false);
-      setSelectedAnswers({});
-    } catch (err) {
-      console.error('Error resetting game:', err);
-    } finally {
-      setIsResettingGame(false);
-    }
-  };
-
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Jeopardy Admin Dashboard</h2>
 
-      <div style={{
+      {(isFinalJeopardy) ? (
+        <div style={{
+        padding: '15px',
+        backgroundColor: '#060CE9',
+        borderRadius: '8px',
+        marginBottom: '30px',
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
+      </div>
+
+      ) : (
+       <div style={{
         padding: '15px',
         backgroundColor: '#060CE9',
         borderRadius: '8px',
@@ -187,6 +200,8 @@ const AdminDashboard = () => {
         <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
         <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
       </div>
+      )}
+
 
       {sortedPlayers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
@@ -261,45 +276,61 @@ const AdminDashboard = () => {
                 )}
               </div>
               {showAnswers && player.answer && (
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    backgroundColor: selectedAnswers[player.row] === 'correct' ? '#4caf50' : '#f0f0f0',
-                    color: selectedAnswers[player.row] === 'correct' ? 'white' : '#333',
-                    borderRadius: '4px',
-                    fontWeight: selectedAnswers[player.row] === 'correct' ? 'bold' : 'normal'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedAnswers[player.row] === 'correct'}
-                      onChange={() => handleAnswerSelection(player.row, true)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    Correct
-                  </label>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    backgroundColor: selectedAnswers[player.row] === 'incorrect' ? '#f44336' : '#f0f0f0',
-                    color: selectedAnswers[player.row] === 'incorrect' ? 'white' : '#333',
-                    borderRadius: '4px',
-                    fontWeight: selectedAnswers[player.row] === 'incorrect' ? 'bold' : 'normal'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedAnswers[player.row] === 'incorrect'}
-                      onChange={() => handleAnswerSelection(player.row, false)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    Incorrect
-                  </label>
+                <div>
+                  {isFinalJeopardy && (
+                    <div style={{
+                      marginTop: '10px',
+                      marginBottom: '10px',
+                      padding: '8px 12px',
+                      backgroundColor: '#e3f2fd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: '#1976d2'
+                    }}>
+                      Wager: ${player.wager || 0}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      backgroundColor: selectedAnswers[player.row] === 'correct' ? '#4caf50' : '#f0f0f0',
+                      color: selectedAnswers[player.row] === 'correct' ? 'white' : '#333',
+                      borderRadius: '4px',
+                      fontWeight: selectedAnswers[player.row] === 'correct' ? 'bold' : 'normal'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAnswers[player.row] === 'correct'}
+                        onChange={() => handleAnswerSelection(player.row, true)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      Correct
+                    </label>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      backgroundColor: selectedAnswers[player.row] === 'incorrect' ? '#f44336' : '#f0f0f0',
+                      color: selectedAnswers[player.row] === 'incorrect' ? 'white' : '#333',
+                      borderRadius: '4px',
+                      fontWeight: selectedAnswers[player.row] === 'incorrect' ? 'bold' : 'normal'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAnswers[player.row] === 'incorrect'}
+                        onChange={() => handleAnswerSelection(player.row, false)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      Incorrect
+                    </label>
+                  </div>
                 </div>
               )}
             </div>
@@ -341,11 +372,6 @@ const AdminDashboard = () => {
         >
           {isResetting ? 'Submitting...' : 'Submit Answers'}
         </button>
-      </div>
-
-      <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-        <h3 style={{ marginBottom: '15px' }}>Game Controls</h3>
-
       </div>
     </div>
   );

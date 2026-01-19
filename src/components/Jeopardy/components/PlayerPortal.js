@@ -1,6 +1,11 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import { submitPlayerAnswer, fetchAllPlayersWithScores } from "../../../utils/googleSheets";
+import {
+  submitPlayerAnswer,
+  submitPlayerWager,
+  fetchAllPlayersWithScores,
+  fetchCurrentCategoryAndScore
+} from "../../../utils/googleSheets";
 
 const PlayerPortal = ({ player, playerRow }) => {
   const [answer, setAnswer] = useState('');
@@ -9,6 +14,12 @@ const PlayerPortal = ({ player, playerRow }) => {
   const [error, setError] = useState(null);
   const [score, setScore] = useState(0);
   const [loadingScore, setLoadingScore] = useState(true);
+  const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [currentScore, setCurrentScore] = useState(0);
+  const [wager, setWager] = useState(0);
+  const [wagerSubmitted, setWagerSubmitted] = useState(false);
+  const [submittedWagerValue, setSubmittedWagerValue] = useState(0);
 
   // Google Sheets configuration
   const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
@@ -17,29 +28,33 @@ const PlayerPortal = ({ player, playerRow }) => {
   useEffect(() => {
     const loadPlayerData = async () => {
       try {
-        if (loadingScore) {
-          setLoadingScore(true);
-        }
-        // Fetch all players to get both score and answer status
-        const allPlayers = await fetchAllPlayersWithScores(SHEET_ID, API_KEY);
+        const [allPlayers, categoryData] = await Promise.all([
+          fetchAllPlayersWithScores(SHEET_ID, API_KEY),
+          fetchCurrentCategoryAndScore(SHEET_ID, API_KEY)
+        ]);
+
         const currentPlayer = allPlayers.find(p => p.row === playerRow);
 
         if (currentPlayer) {
           setScore(currentPlayer.score);
-          // If the answer in the sheet is empty, clear the local submittedAnswer
-          if (!currentPlayer.answer) {
-            setSubmittedAnswer('');
-          } else {
-            setSubmittedAnswer(currentPlayer.answer);
+          setSubmittedAnswer(currentPlayer.answer || '');
+          // Check if wager has been submitted
+          if (currentPlayer.wager > 0) {
+            setWagerSubmitted(true);
+            setSubmittedWagerValue(currentPlayer.wager);
           }
         } else {
           setScore(0);
+          setSubmittedAnswer('');
         }
+
+        // 🔥 THIS IS THE KEY LINE
+        setIsFinalJeopardy(categoryData.isFinalJeopardy);
+        setCurrentCategory(categoryData.category);
+        setCurrentScore(categoryData.score);
+
       } catch (err) {
         console.error('Error loading player data:', err);
-        if (err.response?.status !== 429) {
-          setScore(0);
-        }
       } finally {
         setLoadingScore(false);
       }
@@ -77,12 +92,98 @@ const PlayerPortal = ({ player, playerRow }) => {
     }
   };
 
+  const handleWagerSubmit = async () => {
+    if (wager > 0) {
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        // Submit wager via Google Apps Script
+        await submitPlayerWager(playerRow, wager);
+
+        setWagerSubmitted(true);
+        setSubmittedWagerValue(wager);
+      } catch (err) {
+        console.error('Error submitting wager:', err);
+        setError('Failed to submit wager. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !isSubmitting) {
       handleSend();
     }
   };
 
+  const handleWagerChange = (value) => {
+    const numValue = parseInt(value) || 0;
+    const clampedValue = Math.max(0, Math.min(numValue, score));
+    setWager(clampedValue);
+  };
+
+  // Wager input for Final Jeopardy (shown first, before answer)
+  const wagerInput = (
+    <div>
+      <label htmlFor="wager" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+        Enter Your Wager (Max: ${score}):
+      </label>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <input
+          id="wager"
+          type="number"
+          min="0"
+          max={score}
+          value={wager}
+          onChange={(e) => handleWagerChange(e.target.value)}
+          placeholder="Enter your wager..."
+          disabled={isSubmitting}
+          style={{
+            flex: 1,
+            padding: '12px',
+            fontSize: '16px',
+            border: '2px solid #060CE9',
+            borderRadius: '8px',
+            outline: 'none',
+            opacity: isSubmitting ? 0.6 : 1
+          }}
+        />
+        <button
+          onClick={handleWagerSubmit}
+          disabled={wager <= 0 || isSubmitting}
+          style={{
+            padding: '12px 24px',
+            fontSize: '16px',
+            backgroundColor: wager > 0 && !isSubmitting ? '#060CE9' : '#ccc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: wager > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
+            fontWeight: 'bold',
+            minWidth: '100px'
+          }}
+        >
+          {isSubmitting ? 'Sending...' : 'Submit Wager'}
+        </button>
+      </div>
+      {error && (
+        <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>
+      )}
+    </div>
+  );
+
+  // Wager submitted display
+  const wagerSubmittedDisplay = (
+    <div>
+      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e3f2fd', borderRadius: '8px', marginBottom: '20px' }}>
+        ✓ Wager submitted: <strong>${submittedWagerValue}</strong>
+      </p>
+    </div>
+  );
+
+  // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
     <div>
       <label htmlFor="answer" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
@@ -131,8 +232,6 @@ const PlayerPortal = ({ player, playerRow }) => {
     </div>
   );
 
-  let answerDisplay = inputField;
-
   const submittedAnswerDisplay = (
     <div>
       <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
@@ -141,16 +240,65 @@ const PlayerPortal = ({ player, playerRow }) => {
     </div>
   );
 
-  if (submittedAnswer) {
-    answerDisplay = submittedAnswerDisplay;
+  // Determine what to display based on Final Jeopardy state
+  let answerDisplay;
+
+  if (isFinalJeopardy) {
+    // Final Jeopardy: Show wager first, then answer
+    if (submittedAnswer) {
+      // Both wager and answer submitted
+      answerDisplay = (
+        <div>
+          {wagerSubmittedDisplay}
+          {submittedAnswerDisplay}
+        </div>
+      );
+    } else if (wagerSubmitted) {
+      // Wager submitted, now show answer input
+      answerDisplay = (
+        <div>
+          {wagerSubmittedDisplay}
+          {inputField}
+        </div>
+      );
+    } else {
+      // Show wager input first
+      answerDisplay = wagerInput;
+    }
+  } else {
+    // Regular round: Just show answer input or submitted answer
+    answerDisplay = submittedAnswer ? submittedAnswerDisplay : inputField;
   }
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }} className="jeopardy">
       <h2>{player}</h2>
-      <p style={{ fontSize: '18px', marginBottom: '30px' }}>
-        Score: {score}
-      </p>
+      {(isFinalJeopardy) ? (
+        <div style={{
+        padding: '15px',
+        backgroundColor: '#060CE9',
+        borderRadius: '8px',
+        marginBottom: '30px',
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
+      </div>
+
+      ) : (
+       <div style={{
+        padding: '15px',
+        backgroundColor: '#060CE9',
+        borderRadius: '8px',
+        marginBottom: '30px',
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
+        <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
+      </div>
+      )}
+      <h3 style={{ marginBottom: '10px' }}>Your Score: ${loadingScore ? 'Loading...' : score}</h3>
       {answerDisplay}
     </div>
   );
