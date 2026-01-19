@@ -48,7 +48,7 @@ const PlayerSelect = () => {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px' }} className="jeopardy">
       <h2>Select Your Name</h2>
       <div style={{
         display: 'flex',
