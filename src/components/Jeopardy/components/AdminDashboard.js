@@ -360,11 +360,11 @@ const AdminDashboard = () => {
 
         <button
           onClick={handleSubmitAnswers}
-          disabled={isResetting}
+          disabled={!showAnswers || isResetting}
           style={{
             padding: '12px 24px',
             fontSize: '16px',
-            backgroundColor: isResetting ? '#ccc' : 'green',
+            backgroundColor: isResetting || !showAnswers ? '#ccc' : 'green',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
@@ -383,7 +383,7 @@ const AdminDashboard = () => {
         backgroundColor: '#f5f5f5',
         borderRadius: '8px',
         marginBottom: '30px',
-        marginTop: '30px'
+        marginTop: '50px'
       }}>
         <h3 style={{ marginTop: '0', marginBottom: '15px' }}>Game Controls</h3>
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>

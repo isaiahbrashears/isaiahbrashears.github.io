@@ -76,7 +76,9 @@ const PlayerPortal = ({ player, playerId }) => {
   };
 
   const handleWagerSubmit = async () => {
-    if (wager > 0) {
+    if (wager > score) {
+      setError(`Wager cannot exceed your current score of $${score}.`);
+    }else {
       setIsSubmitting(true);
       setError(null);
 
@@ -90,7 +92,7 @@ const PlayerPortal = ({ player, playerId }) => {
       } finally {
         setIsSubmitting(false);
       }
-    }
+}
   };
 
   const handleKeyPress = (e) => {
@@ -116,7 +118,7 @@ const PlayerPortal = ({ player, playerId }) => {
       <label htmlFor="wager" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
         Enter Your Wager (Max: ${score}):
       </label>
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
         <input
           id="wager"
           type="number"
@@ -138,15 +140,15 @@ const PlayerPortal = ({ player, playerId }) => {
         />
         <button
           onClick={handleWagerSubmit}
-          disabled={wager <= 0 || isSubmitting}
+          disabled={isSubmitting}
           style={{
             padding: '12px 24px',
             fontSize: '16px',
-            backgroundColor: wager > 0 && !isSubmitting ? '#060CE9' : '#ccc',
+            backgroundColor: !isSubmitting ? '#060CE9' : '#ccc',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            cursor: wager > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
+            cursor: !isSubmitting ? 'pointer' : 'not-allowed',
             fontWeight: 'bold',
             minWidth: '100px'
           }}
@@ -175,7 +177,7 @@ const PlayerPortal = ({ player, playerId }) => {
       <label htmlFor="answer" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
         Your Answer:
       </label>
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
         <input
           id="answer"
           type="text"
