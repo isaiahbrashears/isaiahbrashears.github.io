@@ -1008,3 +1008,33 @@
 .text-align-right {
   text-align: right;
 }
+
+.button {
+  cursor: pointer;
+  text-decoration: none;
+  padding: 12px 24px;
+  font-size: 18px;
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+  background-color: blue;
+  display: block;
+  text-align: center;
+  font-weight: bold;
+
+  &.green {
+    background-color: green;
+  }
+
+  &.red {
+    background-color: red;
+  }
+
+  &.maroon {
+    background-color: #6f1908ff;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+}

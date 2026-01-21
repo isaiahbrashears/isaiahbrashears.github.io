@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchSheetData } from "../../../utils/googleSheets";
+import { subscribeToPlayers } from "../../../utils/firebase";
 
 const PlayerSelect = () => {
   const [players, setPlayers] = useState([]);
@@ -9,34 +9,29 @@ const PlayerSelect = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Google Sheets configuration
-  const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
-  const RANGE = 'Players!A2:A11'; // Players sheet, rows 2-11 in column A
-  const API_KEY = 'AIzaSyBttryaeAIQgtRYr420ezByQsmWDfYuoEY';
-
   useEffect(() => {
-    const loadPlayers = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchSheetData(SHEET_ID, RANGE, API_KEY);
-        // Filter out empty strings and header if present
-        const filteredData = data.filter(player => player && player.trim() !== '');
-        setPlayers(filteredData);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load players from Google Sheets');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
 
-    loadPlayers();
+    // Subscribe to real-time player updates
+    const unsubscribe = subscribeToPlayers((allPlayers) => {
+      // Filter out empty names
+      const filteredPlayers = allPlayers.filter(p => p.name && p.name.trim() !== '');
+      setPlayers(filteredPlayers);
+      setLoading(false);
+      setError(null);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const handlePlayerClick = (player) => {
-    // Navigate to /jeopardy/{playerName}
-    navigate(`/jeopardy/${encodeURIComponent(player)}`);
+    // Navigate to /jeopardy/{playerName} with player ID in state
+    navigate(`/jeopardy/${encodeURIComponent(player.name)}`, {
+      state: { playerId: player.id }
+    });
   };
 
   if (loading) {
@@ -57,9 +52,9 @@ const PlayerSelect = () => {
         maxWidth: '400px',
         margin: '0 auto'
       }}>
-        {players.map((player, index) => (
+        {players.map((player) => (
           <button
-            key={index}
+            key={player.id}
             onClick={() => handlePlayerClick(player)}
             style={{
               padding: '16px 24px',
@@ -75,11 +70,11 @@ const PlayerSelect = () => {
             onMouseEnter={(e) => e.target.style.backgroundColor = '#0509B8'}
             onMouseLeave={(e) => e.target.style.backgroundColor = '#060CE9'}
           >
-            {player}
+            {player.name}
           </button>
         ))}
         <button
-            onClick={() => handlePlayerClick('admin')}
+            onClick={() => navigate('/jeopardy/admin')}
             style={{
               padding: '16px 24px',
               fontSize: '16px',
