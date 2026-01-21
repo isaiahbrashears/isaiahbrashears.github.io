@@ -1,6 +1,15 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import { fetchAllPlayersWithScores, clearAllAnswers, fetchCurrentCategoryAndScore, updatePlayerScore, updateCellReferences, setFinalJeopardy, resetGame } from "../../../utils/googleSheets";
+import {
+  subscribeToPlayers,
+  subscribeToGameState,
+  clearAllAnswers,
+  updatePlayerScore,
+  advanceToNextQuestion,
+  setFinalJeopardy,
+  setDoubleJeopardy,
+  resetGame
+} from "../../../utils/firebase";
 
 const AdminDashboard = () => {
   const [players, setPlayers] = useState([]);
@@ -10,56 +19,34 @@ const AdminDashboard = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [currentCategory, setCurrentCategory] = useState('');
   const [currentScore, setCurrentScore] = useState(0);
-  const [categoryCell, setCategoryCell] = useState('A1');
-  const [scoreCell, setScoreCell] = useState('A2');
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
+  const [isDoubleJeopardy, setIsDoubleJeopardy] = useState(false);
   const [isResettingGame, setIsResettingGame] = useState(false);
   const [isTogglingFinalJeopardy, setIsTogglingFinalJeopardy] = useState(false);
-
-  // Google Sheets configuration
-  const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
-  const API_KEY = 'AIzaSyBttryaeAIQgtRYr420ezByQsmWDfYuoEY';
+  const [isTogglingDoubleJeopardy, setIsTogglingDoubleJeopardy] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        if (loading && players.length === 0) {
-          setLoading(true);
-        }
-        const [allPlayers, categoryAndScore] = await Promise.all([
-          fetchAllPlayersWithScores(SHEET_ID, API_KEY),
-          fetchCurrentCategoryAndScore(SHEET_ID, API_KEY)
-        ]);
-        setPlayers(allPlayers);
-        setCurrentCategory(categoryAndScore.category);
-        setCurrentScore(categoryAndScore.score);
-        setCategoryCell(categoryAndScore.categoryCell);
-        setIsFinalJeopardy(categoryAndScore.isFinalJeopardy);
-        setScoreCell(categoryAndScore.scoreCell);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading data:', err);
-        if (err.response?.status === 429) {
-          setError('Rate limit exceeded. Slowing down requests...');
-        } else {
-          setError('Failed to load data');
-        }
-      } finally {
-        setLoading(false);
-      }
+    // Subscribe to real-time player updates
+    const unsubscribePlayers = subscribeToPlayers((allPlayers) => {
+      setPlayers(allPlayers);
+      setLoading(false);
+      setError(null);
+    });
+
+    // Subscribe to real-time game state updates
+    const unsubscribeGameState = subscribeToGameState((gameState) => {
+      setCurrentCategory(gameState.category);
+      setCurrentScore(gameState.score);
+      setIsFinalJeopardy(gameState.isFinalJeopardy);
+      setIsDoubleJeopardy(gameState.isDoubleJeopardy);
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribeGameState) unsubscribeGameState();
     };
-
-    // Load immediately
-    loadData();
-
-    // Poll every 10 seconds for updates (reduced from 3 seconds)
-    const intervalId = setInterval(() => {
-      loadData();
-    }, 5000);
-
-    // Clean up on unmount
-    return () => clearInterval(intervalId);
   }, []);
 
   if (loading && players.length === 0) {
@@ -80,10 +67,8 @@ const AdminDashboard = () => {
     );
   }
 
-  const playersWithScores = players;
-
   // Sort by score descending
-  const sortedPlayers = [...playersWithScores].sort((a, b) => b.score - a.score);
+  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
   // Get unique scores for ranking
   const uniqueScores = [...new Set(sortedPlayers.map(p => p.score))].sort((a, b) => b - a);
@@ -97,50 +82,26 @@ const AdminDashboard = () => {
     return `${scoreRank + 1}`;
   };
 
-  // Helper function to get next cell reference
-  const getNextCell = (currentCell, isCategory) => {
-    const match = currentCell.match(/([A-Z]+)(\d+)/);
-    if (!match) return isCategory ? 'A1' : 'A2';
-
-    const col = match[1];
-    const row = parseInt(match[2]);
-
-    if (isCategory) {
-      // Category: A1 -> B1 -> C1 -> D1 -> E1 -> F1 -> A1
-      if (col === 'F') return 'A1';
-      return String.fromCharCode(col.charCodeAt(0) + 1) + row;
-    } else {
-      // Score: A2 -> B2 -> C2 -> D2 -> E2 -> F2 -> A3 -> B3... -> F6 -> A2
-      if (col === 'F') {
-        if (row === 6) return 'A2'; // Reset to beginning
-        return 'A' + (row + 1); // Move to next row
-      }
-      return String.fromCharCode(col.charCodeAt(0) + 1) + row;
-    }
-  };
-
   const handleSubmitAnswers = async () => {
     setIsResetting(true);
     try {
       // Submit scores for all correct answers
-      const updatePromises = Object.entries(selectedAnswers).map(([row, status]) => {
-        const rowNum = parseInt(row);
+      const updatePromises = Object.entries(selectedAnswers).map(([playerId, status]) => {
         if (isFinalJeopardy) {
           // In Final Jeopardy, use wager amount from player data
-          const player = players.find(p => p.row === rowNum);
+          const player = players.find(p => p.id === playerId);
           const wagerAmount = player?.wager || 0;
-          console.log('WAGER AMOUNT CHECK', wagerAmount);
 
           if (status === 'correct') {
-            return updatePlayerScore(rowNum, wagerAmount);
+            return updatePlayerScore(playerId, wagerAmount);
           } else if (status === 'incorrect') {
             // Subtract wager for incorrect answers
-            return updatePlayerScore(rowNum, -wagerAmount);
+            return updatePlayerScore(playerId, -wagerAmount);
           }
         } else {
           // Regular questions: add currentScore for correct answers only
           if (status === 'correct') {
-            return updatePlayerScore(rowNum, currentScore);
+            return updatePlayerScore(playerId, currentScore);
           }
         }
         return Promise.resolve();
@@ -148,12 +109,8 @@ const AdminDashboard = () => {
 
       await Promise.all(updatePromises);
 
-      // Calculate next cell references
-      const nextCategoryCell = getNextCell(categoryCell, true);
-      const nextScoreCell = getNextCell(scoreCell, false);
-
-      // Update cell references in Google Sheets
-      await updateCellReferences(nextCategoryCell, nextScoreCell);
+      // Advance to next question
+      await advanceToNextQuestion();
 
       // Clear answers after submitting scores
       await clearAllAnswers();
@@ -166,11 +123,10 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleAnswerSelection = (playerRow, isCorrect) => {
-    // Just mark the answer as selected, don't submit yet
+  const handleAnswerSelection = (playerId, isCorrect) => {
     setSelectedAnswers(prev => ({
       ...prev,
-      [playerRow]: isCorrect ? 'correct' : 'incorrect'
+      [playerId]: isCorrect ? 'correct' : 'incorrect'
     }));
   };
 
@@ -182,10 +138,8 @@ const AdminDashboard = () => {
     setIsResettingGame(true);
     try {
       await resetGame();
-      // Refresh data after reset
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      setSelectedAnswers({});
+      setShowAnswers(false);
     } catch (err) {
       console.error('Error resetting game:', err);
       alert('Failed to reset game. Please try again.');
@@ -198,8 +152,6 @@ const AdminDashboard = () => {
     setIsTogglingFinalJeopardy(true);
     try {
       await setFinalJeopardy(!isFinalJeopardy);
-      // Update local state after successful toggle
-      setIsFinalJeopardy(!isFinalJeopardy);
     } catch (err) {
       console.error('Error toggling Final Jeopardy:', err);
       alert('Failed to toggle Final Jeopardy. Please try again.');
@@ -208,34 +160,48 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleToggleDoubleJeopardy = async () => {
+    setIsTogglingDoubleJeopardy(true);
+    try {
+      await setDoubleJeopardy(!isDoubleJeopardy);
+    } catch (err) {
+      console.error('Error toggling Double Jeopardy:', err);
+      alert('Failed to toggle Double Jeopardy. Please try again.');
+    } finally {
+      setIsTogglingDoubleJeopardy(false);
+    }
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Jeopardy Admin Dashboard</h2>
 
-      {(isFinalJeopardy) ? (
+      {isFinalJeopardy ? (
         <div style={{
-        padding: '15px',
-        backgroundColor: '#060CE9',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
-      </div>
-
+          padding: '15px',
+          backgroundColor: '#060CE9',
+          borderRadius: '8px',
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
+        </div>
       ) : (
-       <div style={{
-        padding: '15px',
-        backgroundColor: '#060CE9',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
-        <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
-      </div>
+        <div style={{
+          padding: '15px',
+          backgroundColor: isDoubleJeopardy ? '#9c27b0' : '#060CE9',
+          borderRadius: '8px',
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          {isDoubleJeopardy && (
+            <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
+          )}
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
+          <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
+        </div>
       )}
 
 
@@ -257,7 +223,7 @@ const AdminDashboard = () => {
             <tbody>
               {sortedPlayers.map((player, index) => (
                 <tr
-                  key={player.row}
+                  key={player.id}
                   style={{
                     backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white',
                     borderBottom: '1px solid #e0e0e0'
@@ -282,7 +248,7 @@ const AdminDashboard = () => {
         <div style={{ marginBottom: '20px' }}>
           {players.map((player) => (
             <div
-              key={player.row}
+              key={player.id}
               style={{
                 padding: '12px',
                 marginBottom: '8px',
@@ -293,14 +259,15 @@ const AdminDashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showAnswers && player.answer ? '10px' : '0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontWeight: 'bold' }}>{player.name}</span>
-                  <span style={{ fontSize: '20px' }}>
+                  <span style={{ fontSize: '25px', fontWeight: 'bold' }}>
                     {player.answer ? '✅' : '❌'}
                   </span>
                 </div>
                 {showAnswers && player.answer && (
                   <div style={{
-                    fontSize: '14px',
+                    fontSize: '20px',
                     color: '#666',
+                    fontWeight: 'bold',
                     fontStyle: 'italic',
                     maxWidth: '300px',
                     overflow: 'hidden',
@@ -334,15 +301,15 @@ const AdminDashboard = () => {
                       gap: '5px',
                       cursor: 'pointer',
                       padding: '6px 12px',
-                      backgroundColor: selectedAnswers[player.row] === 'correct' ? '#4caf50' : '#f0f0f0',
-                      color: selectedAnswers[player.row] === 'correct' ? 'white' : '#333',
+                      backgroundColor: selectedAnswers[player.id] === 'correct' ? '#4caf50' : '#f0f0f0',
+                      color: selectedAnswers[player.id] === 'correct' ? 'white' : '#333',
                       borderRadius: '4px',
-                      fontWeight: selectedAnswers[player.row] === 'correct' ? 'bold' : 'normal'
+                      fontWeight: selectedAnswers[player.id] === 'correct' ? 'bold' : 'normal'
                     }}>
                       <input
                         type="checkbox"
-                        checked={selectedAnswers[player.row] === 'correct'}
-                        onChange={() => handleAnswerSelection(player.row, true)}
+                        checked={selectedAnswers[player.id] === 'correct'}
+                        onChange={() => handleAnswerSelection(player.id, true)}
                         style={{ cursor: 'pointer' }}
                       />
                       Correct
@@ -353,15 +320,15 @@ const AdminDashboard = () => {
                       gap: '5px',
                       cursor: 'pointer',
                       padding: '6px 12px',
-                      backgroundColor: selectedAnswers[player.row] === 'incorrect' ? '#f44336' : '#f0f0f0',
-                      color: selectedAnswers[player.row] === 'incorrect' ? 'white' : '#333',
+                      backgroundColor: selectedAnswers[player.id] === 'incorrect' ? '#f44336' : '#f0f0f0',
+                      color: selectedAnswers[player.id] === 'incorrect' ? 'white' : '#333',
                       borderRadius: '4px',
-                      fontWeight: selectedAnswers[player.row] === 'incorrect' ? 'bold' : 'normal'
+                      fontWeight: selectedAnswers[player.id] === 'incorrect' ? 'bold' : 'normal'
                     }}>
                       <input
                         type="checkbox"
-                        checked={selectedAnswers[player.row] === 'incorrect'}
-                        onChange={() => handleAnswerSelection(player.row, false)}
+                        checked={selectedAnswers[player.id] === 'incorrect'}
+                        onChange={() => handleAnswerSelection(player.id, false)}
                         style={{ cursor: 'pointer' }}
                       />
                       Incorrect
@@ -415,43 +382,31 @@ const AdminDashboard = () => {
         padding: '20px',
         backgroundColor: '#f5f5f5',
         borderRadius: '8px',
-        marginBottom: '30px'
+        marginBottom: '30px',
+        marginTop: '30px'
       }}>
         <h3 style={{ marginTop: '0', marginBottom: '15px' }}>Game Controls</h3>
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <a href="/#/jeopardy/setup" className="button w-full">Setup Game</a>
+          <button
+            onClick={handleToggleDoubleJeopardy}
+            disabled={isTogglingDoubleJeopardy || isFinalJeopardy}
+            className="button w-full"
+            style={{ backgroundColor: isDoubleJeopardy ? '#ff9800' : '#9c27b0' }}
+          >
+            {isTogglingDoubleJeopardy ? 'Updating...' : (isDoubleJeopardy ? 'Exit Double Jeopardy' : 'Start Double Jeopardy')}
+          </button>
           <button
             onClick={handleToggleFinalJeopardy}
             disabled={isTogglingFinalJeopardy}
-            style={{
-              flex: '1',
-              minWidth: '200px',
-              padding: '12px 24px',
-              fontSize: '16px',
-              backgroundColor: isTogglingFinalJeopardy ? '#ccc' : (isFinalJeopardy ? '#f44336' : '#4caf50'),
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isTogglingFinalJeopardy ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
+            className="button green w-full"
           >
             {isTogglingFinalJeopardy ? 'Updating...' : (isFinalJeopardy ? 'Exit Final Jeopardy' : 'Start Final Jeopardy')}
           </button>
           <button
             onClick={handleResetGame}
             disabled={isResettingGame}
-            style={{
-              flex: '1',
-              minWidth: '200px',
-              padding: '12px 24px',
-              fontSize: '16px',
-              backgroundColor: isResettingGame ? '#ccc' : '#ff5722',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isResettingGame ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
+            className="button red w-full"
           >
             {isResettingGame ? 'Resetting...' : 'Reset Game'}
           </button>

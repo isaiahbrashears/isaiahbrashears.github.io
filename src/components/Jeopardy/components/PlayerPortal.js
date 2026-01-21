@@ -3,11 +3,11 @@ import React, { useState, useEffect } from "react";
 import {
   submitPlayerAnswer,
   submitPlayerWager,
-  fetchAllPlayersWithScores,
-  fetchCurrentCategoryAndScore
-} from "../../../utils/googleSheets";
+  subscribeToPlayer,
+  subscribeToGameState
+} from "../../../utils/firebase";
 
-const PlayerPortal = ({ player, playerRow }) => {
+const PlayerPortal = ({ player, playerId }) => {
   const [answer, setAnswer] = useState('');
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,62 +15,47 @@ const PlayerPortal = ({ player, playerRow }) => {
   const [score, setScore] = useState(0);
   const [loadingScore, setLoadingScore] = useState(true);
   const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
+  const [isDoubleJeopardy, setIsDoubleJeopardy] = useState(false);
   const [currentCategory, setCurrentCategory] = useState('');
   const [currentScore, setCurrentScore] = useState(0);
   const [wager, setWager] = useState(0);
   const [wagerSubmitted, setWagerSubmitted] = useState(false);
   const [submittedWagerValue, setSubmittedWagerValue] = useState(0);
 
-  // Google Sheets configuration
-  const SHEET_ID = '1B2sbqWxT5_C90tpRbrSHbIYUd9jHMrIi5HACZTq5074';
-  const API_KEY = 'AIzaSyBttryaeAIQgtRYr420ezByQsmWDfYuoEY';
-
   useEffect(() => {
-    const loadPlayerData = async () => {
-      try {
-        const [allPlayers, categoryData] = await Promise.all([
-          fetchAllPlayersWithScores(SHEET_ID, API_KEY),
-          fetchCurrentCategoryAndScore(SHEET_ID, API_KEY)
-        ]);
+    if (!playerId) return;
 
-        const currentPlayer = allPlayers.find(p => p.row === playerRow);
+    // Subscribe to real-time player updates
+    const unsubscribePlayer = subscribeToPlayer(playerId, (playerData) => {
+      setScore(playerData.score || 0);
+      setSubmittedAnswer(playerData.answer || '');
 
-        if (currentPlayer) {
-          setScore(currentPlayer.score);
-          setSubmittedAnswer(currentPlayer.answer || '');
-          // Check if wager has been submitted
-          if (currentPlayer.wager > 0) {
-            setWagerSubmitted(true);
-            setSubmittedWagerValue(currentPlayer.wager);
-          }
-        } else {
-          setScore(0);
-          setSubmittedAnswer('');
-        }
-
-        // 🔥 THIS IS THE KEY LINE
-        setIsFinalJeopardy(categoryData.isFinalJeopardy);
-        setCurrentCategory(categoryData.category);
-        setCurrentScore(categoryData.score);
-
-      } catch (err) {
-        console.error('Error loading player data:', err);
-      } finally {
-        setLoadingScore(false);
+      // Check if wager has been submitted
+      if (playerData.wager > 0) {
+        setWagerSubmitted(true);
+        setSubmittedWagerValue(playerData.wager);
+      } else {
+        setWagerSubmitted(false);
+        setSubmittedWagerValue(0);
       }
+
+      setLoadingScore(false);
+    });
+
+    // Subscribe to real-time game state updates
+    const unsubscribeGameState = subscribeToGameState((gameState) => {
+      setIsFinalJeopardy(gameState.isFinalJeopardy);
+      setIsDoubleJeopardy(gameState.isDoubleJeopardy);
+      setCurrentCategory(gameState.category);
+      setCurrentScore(gameState.score);
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (unsubscribePlayer) unsubscribePlayer();
+      if (unsubscribeGameState) unsubscribeGameState();
     };
-
-    // Load player data immediately
-    loadPlayerData();
-
-    // Set up polling every 10 seconds (reduced from 3 seconds)
-    const intervalId = setInterval(() => {
-      loadPlayerData();
-    }, 5000);
-
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
-  }, [playerRow]);
+  }, [playerId]);
 
   const handleSend = async () => {
     if (answer.trim()) {
@@ -78,9 +63,7 @@ const PlayerPortal = ({ player, playerRow }) => {
       setError(null);
 
       try {
-        // Submit answer via Google Apps Script
-        await submitPlayerAnswer(playerRow, answer.trim());
-
+        await submitPlayerAnswer(playerId, answer.trim());
         setSubmittedAnswer(answer.trim());
         setAnswer('');
       } catch (err) {
@@ -98,9 +81,7 @@ const PlayerPortal = ({ player, playerRow }) => {
       setError(null);
 
       try {
-        // Submit wager via Google Apps Script
-        await submitPlayerWager(playerRow, wager);
-
+        await submitPlayerWager(playerId, wager);
         setWagerSubmitted(true);
         setSubmittedWagerValue(wager);
       } catch (err) {
@@ -119,9 +100,14 @@ const PlayerPortal = ({ player, playerRow }) => {
   };
 
   const handleWagerChange = (value) => {
-    const numValue = parseInt(value) || 0;
-    const clampedValue = Math.max(0, Math.min(numValue, score));
-    setWager(clampedValue);
+    if (value === '') {
+      setWager('');
+      return;
+    }
+    const numValue = parseInt(value);
+    if (!isNaN(numValue)) {
+      setWager(numValue);
+    }
   };
 
   // Wager input for Final Jeopardy (shown first, before answer)
@@ -273,30 +259,32 @@ const PlayerPortal = ({ player, playerRow }) => {
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }} className="jeopardy">
       <h2>{player}</h2>
-      {(isFinalJeopardy) ? (
+      {isFinalJeopardy ? (
         <div style={{
-        padding: '15px',
-        backgroundColor: '#060CE9',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
-      </div>
-
+          padding: '15px',
+          backgroundColor: '#060CE9',
+          borderRadius: '8px',
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>FINAL JEOPARDY!</h3>
+        </div>
       ) : (
-       <div style={{
-        padding: '15px',
-        backgroundColor: '#060CE9',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
-        <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
-      </div>
+        <div style={{
+          padding: '15px',
+          backgroundColor: isDoubleJeopardy ? '#9c27b0' : '#060CE9',
+          borderRadius: '8px',
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          {isDoubleJeopardy && (
+            <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
+          )}
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
+          <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>${currentScore}</p>
+        </div>
       )}
       <h3 style={{ marginBottom: '10px' }}>Your Score: ${loadingScore ? 'Loading...' : score}</h3>
       {answerDisplay}
