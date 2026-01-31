@@ -35,7 +35,11 @@ const PlayerSelect = () => {
   };
 
   if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading players...</div>;
+    return (<>
+    <div className="text-center">Loading...</div>
+    <div style={{ padding: '20px', textAlign: 'center' }}>lol my friends will never actually play</div>;
+    </>)
+
   }
 
   if (error) {
@@ -44,7 +48,7 @@ const PlayerSelect = () => {
 
   return (
     <div style={{ padding: '20px' }} className="jeopardy">
-      <h2>Select Your Name</h2>
+      <h2 className="text-center">Select Your Name</h2>
       <div style={{
         display: 'flex',
         flexDirection: 'column',
