@@ -13,6 +13,9 @@ const PlayerPortal = ({ player }) => {
   const [category, setCategory] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const roundEndTimeRef = useRef(null);
+  const timerRef = useRef(null);
   const inputRef = useRef(null);
 
   const currentLetter = LETTERS[currentIndex];
@@ -35,15 +38,37 @@ const PlayerPortal = ({ player }) => {
     const unsubscribe = subscribeToGameState((gameState) => {
       setRoundActive(gameState.roundActive);
       setCategory(gameState.category || '');
+      roundEndTimeRef.current = gameState.roundEndTime || null;
       if (gameState.roundActive && loaded) {
         setAnswers({});
         setCurrentIndex(0);
         setInputValue('');
         setEditingLetter(null);
       }
+      if (!gameState.roundActive) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimeLeft(null);
+      }
     });
     return () => { if (unsubscribe) unsubscribe(); };
   }, [loaded]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!roundActive || !roundEndTimeRef.current) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((roundEndTimeRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0 && timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [roundActive]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -118,12 +143,13 @@ const PlayerPortal = ({ player }) => {
 
   return (
     <div className="scategories-player-portal">
+      <h2 className="current-category">{category}</h2>
       <div className="player-header">
         <h2>{player}</h2>
         <span className="player-score">{totalScore} pts</span>
       </div>
 
-      {category && <div className="current-category">Category: <strong>{category}</strong></div>}
+      {timeLeft != null && <div className="timer-display">{timeLeft}s</div>}
 
       <div className="answers-list">
         {LETTERS.map(letter => (

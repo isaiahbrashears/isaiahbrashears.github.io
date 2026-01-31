@@ -12,7 +12,6 @@ const Scatagories = () => {
 
   return (
     <div className="scatagories-container">
-      <h1>Scatagories</h1>
       {isAdmin
         ? <AdminPortal />
         : playerName

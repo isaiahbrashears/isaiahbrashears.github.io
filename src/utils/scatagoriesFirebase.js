@@ -112,9 +112,9 @@ export const subscribeToGameState = (callback) => {
 };
 
 // Start a new round (clears all player answers and sets roundActive)
-export const startRound = async () => {
+export const startRound = async (durationMs = 20000) => {
   const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
-  await setDoc(gameRef, { roundActive: true }, { merge: true });
+  await setDoc(gameRef, { roundActive: true, roundEndTime: Date.now() + durationMs }, { merge: true });
 
   // Clear all player answers
   const playersRef = collection(db, SCATAGORIES_PLAYERS_COLLECTION);
@@ -129,7 +129,7 @@ export const startRound = async () => {
 // End the current round
 export const endRound = async () => {
   const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
-  await setDoc(gameRef, { roundActive: false }, { merge: true });
+  await setDoc(gameRef, { roundActive: false, roundEndTime: null }, { merge: true });
 };
 
 // Set the current category
