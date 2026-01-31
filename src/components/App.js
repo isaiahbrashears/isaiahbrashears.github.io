@@ -30,7 +30,7 @@ const Home = () => {
         borderRadius: '8px',
         fontWeight: 'bold'
       }}>
-        Scat and Gories
+        Scatagories
       </Link>
       <Link to="/fifa-draft" style={{
         padding: '16px 32px',
