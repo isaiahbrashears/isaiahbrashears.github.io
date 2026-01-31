@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   subscribeToScatagoriesPlayers,
   subscribeToGameState,
@@ -43,6 +43,16 @@ const AdminPortal = () => {
   // flags: { playerId: { A: { duplicate, wrongLetter }, ... } }
   const [flags, setFlags] = useState({});
   const [scoresInitialized, setScoresInitialized] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const roundEndTimeRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const unsubPlayers = subscribeToScatagoriesPlayers((allPlayers) => {
@@ -52,16 +62,39 @@ const AdminPortal = () => {
     const unsubGame = subscribeToGameState((gameState) => {
       setRoundActive(gameState.roundActive);
       setCategory(gameState.category || '');
+      roundEndTimeRef.current = gameState.roundEndTime || null;
       if (gameState.roundActive) {
         setScores({});
         setScoresInitialized(false);
+      } else {
+        stopTimer();
+        setTimeLeft(null);
       }
     });
     return () => {
       if (unsubPlayers) unsubPlayers();
       if (unsubGame) unsubGame();
+      stopTimer();
     };
-  }, []);
+  }, [stopTimer]);
+
+  // Countdown timer - ticks every second and auto-ends round
+  useEffect(() => {
+    if (!roundActive || !roundEndTimeRef.current) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((roundEndTimeRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        stopTimer();
+        endRound();
+      }
+    };
+
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => stopTimer();
+  }, [roundActive, stopTimer]);
 
   // Auto-calculate scores when round ends and players have answers
   useEffect(() => {
@@ -167,12 +200,14 @@ const AdminPortal = () => {
             End Round
           </button>
         ) : (
-          <button className="round-button start" onClick={handleStartRound}>
+          <button className="round-button start" onClick={handleStartRound} disabled={!category.trim()}>
             Start Round
           </button>
         )}
         <span className="round-status">
-          {roundActive ? 'Round in progress' : 'Round not active'}
+          {roundActive
+            ? timeLeft != null ? `${timeLeft}s remaining` : 'Round in progress'
+            : !category.trim() ? 'Enter a category to start' : 'Round not active'}
         </span>
       </div>
 
