@@ -211,9 +211,10 @@ const AdminPortal = () => {
   };
 
   const handleSaveScores = async () => {
-    const promises = Object.entries(scores).map(([playerId, playerScores]) =>
-      savePlayerScores(playerId, playerScores)
-    );
+    const promises = Object.entries(scores).map(([playerId, playerScores]) => {
+      const roundPoints = Object.values(playerScores).filter(Boolean).length;
+      return savePlayerScores(playerId, playerScores, roundPoints);
+    });
     await Promise.all(promises);
   };
 

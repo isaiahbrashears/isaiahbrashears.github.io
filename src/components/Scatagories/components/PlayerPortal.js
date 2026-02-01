@@ -29,9 +29,8 @@ const PlayerPortal = ({ player }) => {
         setAnswers(playerData.answers || {});
         setLoaded(true);
       }
-      // Always update score from saved scores
-      const scores = playerData.scores || {};
-      setTotalScore(Object.values(scores).filter(Boolean).length);
+      // Always update cumulative score
+      setTotalScore(playerData.totalScore || 0);
     });
     return () => { if (unsubPlayer) unsubPlayer(); };
   }, [player, loaded]);
@@ -94,12 +93,27 @@ const PlayerPortal = ({ player }) => {
 
     const letter = editingLetter || currentLetter;
     saveAnswer(letter, trimmed);
-    setInputValue('');
 
     if (editingLetter) {
       setEditingLetter(null);
+      setInputValue(answers[currentLetter] || '');
     } else if (currentIndex < LETTERS.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setInputValue(answers[LETTERS[nextIndex]] || '');
+    } else {
+      setInputValue('');
+    }
+  };
+
+  const advanceEmpty = () => {
+    if (editingLetter) {
+      setEditingLetter(null);
+      setInputValue(answers[currentLetter] || '');
+    } else if (currentIndex < LETTERS.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setInputValue(answers[LETTERS[nextIndex]] || '');
     }
   };
 
@@ -110,23 +124,26 @@ const PlayerPortal = ({ player }) => {
     }
     if (editingLetter) {
       setEditingLetter(null);
-      setInputValue('');
+      setInputValue(answers[currentLetter] || '');
       return;
     }
     if (currentIndex < LETTERS.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setInputValue(answers[LETTERS[nextIndex]] || '');
     }
   };
 
   const handlePrev = () => {
     if (editingLetter) {
       setEditingLetter(null);
-      setInputValue('');
+      setInputValue(answers[currentLetter] || '');
       return;
     }
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-      setInputValue('');
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
+      setInputValue(answers[LETTERS[prevIndex]] || '');
     }
   };
 
@@ -179,7 +196,7 @@ const PlayerPortal = ({ player }) => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmitAnswer()}
+          onKeyDown={(e) => e.key === 'Enter' && (inputValue.trim() ? handleSubmitAnswer() : advanceEmpty())}
           placeholder={`Answer for ${activeLetter}...`}
         />
         <div className="nav-buttons">

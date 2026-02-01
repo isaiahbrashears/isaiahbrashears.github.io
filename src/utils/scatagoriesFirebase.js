@@ -10,7 +10,8 @@ import {
   onSnapshot,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  increment
 } from 'firebase/firestore';
 
 const SCATAGORIES_PLAYERS_COLLECTION = 'scatagories_players';
@@ -91,10 +92,10 @@ export const subscribeToPlayer = (playerName, callback) => {
   });
 };
 
-// Save scores for all players { playerId: { A: true, B: false, ... } }
-export const savePlayerScores = async (playerId, scores) => {
+// Save scores and add round points to cumulative totalScore
+export const savePlayerScores = async (playerId, scores, roundPoints) => {
   const playerRef = doc(db, SCATAGORIES_PLAYERS_COLLECTION, playerId);
-  await updateDoc(playerRef, { scores });
+  await updateDoc(playerRef, { scores, totalScore: increment(roundPoints) });
 };
 
 // ---- Game State ----
