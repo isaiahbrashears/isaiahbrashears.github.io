@@ -111,10 +111,9 @@ export const subscribeToGameState = (callback) => {
   });
 };
 
-// Start a new round (clears all player answers and sets roundActive)
-export const startRound = async (durationMs = 20000) => {
+export const startRound = async (durationMs = 195000) => {
   const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
-  await setDoc(gameRef, { roundActive: true, roundEndTime: Date.now() + durationMs }, { merge: true });
+  await setDoc(gameRef, { roundActive: true, roundEndTime: Date.now() + durationMs, timerPaused: false, timeRemaining: null }, { merge: true });
 
   // Clear all player answers
   const playersRef = collection(db, SCATAGORIES_PLAYERS_COLLECTION);
@@ -126,10 +125,22 @@ export const startRound = async (durationMs = 20000) => {
   await Promise.all(updates);
 };
 
+// Pause the round timer
+export const pauseRound = async (timeRemainingMs) => {
+  const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
+  await setDoc(gameRef, { timerPaused: true, roundEndTime: null, timeRemaining: timeRemainingMs }, { merge: true });
+};
+
+// Resume the round timer
+export const resumeRound = async (timeRemainingMs) => {
+  const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
+  await setDoc(gameRef, { timerPaused: false, roundEndTime: Date.now() + timeRemainingMs, timeRemaining: null }, { merge: true });
+};
+
 // End the current round
 export const endRound = async () => {
   const gameRef = doc(db, ...SCATAGORIES_GAME_DOC.split('/'));
-  await setDoc(gameRef, { roundActive: false, roundEndTime: null }, { merge: true });
+  await setDoc(gameRef, { roundActive: false, roundEndTime: null, timerPaused: false, timeRemaining: null }, { merge: true });
 };
 
 // Set the current category

@@ -14,7 +14,9 @@ const PlayerPortal = ({ player }) => {
   const [totalScore, setTotalScore] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
-  const roundEndTimeRef = useRef(null);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const [roundEndTime, setRoundEndTime] = useState(null);
+  const [pausedRemaining, setPausedRemaining] = useState(null);
   const timerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -38,7 +40,9 @@ const PlayerPortal = ({ player }) => {
     const unsubscribe = subscribeToGameState((gameState) => {
       setRoundActive(gameState.roundActive);
       setCategory(gameState.category || '');
-      roundEndTimeRef.current = gameState.roundEndTime || null;
+      setRoundEndTime(gameState.roundEndTime || null);
+      setTimerPaused(gameState.timerPaused || false);
+      setPausedRemaining(gameState.timeRemaining || null);
       if (gameState.roundActive && loaded) {
         setAnswers({});
         setCurrentIndex(0);
@@ -55,20 +59,24 @@ const PlayerPortal = ({ player }) => {
 
   // Countdown timer
   useEffect(() => {
-    if (!roundActive || !roundEndTimeRef.current) return;
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (!roundActive) { setTimeLeft(null); return; }
+    if (timerPaused) {
+      setTimeLeft(pausedRemaining ? Math.ceil(pausedRemaining / 1000) : null);
+      return;
+    }
+    if (!roundEndTime) return;
 
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((roundEndTimeRef.current - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((roundEndTime - Date.now()) / 1000));
       setTimeLeft(remaining);
-      if (remaining <= 0 && timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (remaining <= 0 && timerRef.current) clearInterval(timerRef.current);
     };
 
     tick();
     timerRef.current = setInterval(tick, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [roundActive]);
+  }, [roundActive, roundEndTime, timerPaused, pausedRemaining]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -149,7 +157,7 @@ const PlayerPortal = ({ player }) => {
         <span className="player-score">{totalScore} pts</span>
       </div>
 
-      {timeLeft != null && <div className="timer-display">{timeLeft}s</div>}
+      {timeLeft != null && <div className={`timer-display ${timerPaused ? 'paused' : ''}`}>{timerPaused ? `PAUSED - ${timeLeft}s` : `${timeLeft}s`}</div>}
 
       <div className="answers-list">
         {LETTERS.map(letter => (

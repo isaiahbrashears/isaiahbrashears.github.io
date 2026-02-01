@@ -1,16 +1,32 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   subscribeToScatagoriesPlayers,
   subscribeToGameState,
   startRound,
   endRound,
+  pauseRound,
+  resumeRound,
   savePlayerScores,
   setCategory as setCategoryInDb,
   resetGame
 } from '../../../utils/scatagoriesFirebase';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+const generateCategoryFromAI = async () => {
+  const res = await fetch('http://localhost:3001/api/generate-category', {
+    method: 'POST'
+  });
+
+  if (!res.ok) {
+    console.error('Backend error');
+    return null;
+  }
+
+  const data = await res.json();
+  return data.category;
+};
 
 // Auto-score a letter for a player
 // Returns { point, duplicate, wrongLetter }
@@ -44,15 +60,11 @@ const AdminPortal = () => {
   const [flags, setFlags] = useState({});
   const [scoresInitialized, setScoresInitialized] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
-  const roundEndTimeRef = useRef(null);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const [roundEndTime, setRoundEndTime] = useState(null);
+  const [pausedRemaining, setPausedRemaining] = useState(null);
+  const [generating, setGenerating] = useState(false);
   const timerRef = useRef(null);
-
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
 
   useEffect(() => {
     const unsubPlayers = subscribeToScatagoriesPlayers((allPlayers) => {
@@ -62,39 +74,46 @@ const AdminPortal = () => {
     const unsubGame = subscribeToGameState((gameState) => {
       setRoundActive(gameState.roundActive);
       setCategory(gameState.category || '');
-      roundEndTimeRef.current = gameState.roundEndTime || null;
+      setRoundEndTime(gameState.roundEndTime || null);
+      setTimerPaused(gameState.timerPaused || false);
+      setPausedRemaining(gameState.timeRemaining || null);
       if (gameState.roundActive) {
         setScores({});
         setScoresInitialized(false);
       } else {
-        stopTimer();
         setTimeLeft(null);
       }
     });
     return () => {
       if (unsubPlayers) unsubPlayers();
       if (unsubGame) unsubGame();
-      stopTimer();
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [stopTimer]);
+  }, []);
 
-  // Countdown timer - ticks every second and auto-ends round
+  // Countdown timer
   useEffect(() => {
-    if (!roundActive || !roundEndTimeRef.current) return;
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (!roundActive) { setTimeLeft(null); return; }
+    if (timerPaused) {
+      setTimeLeft(pausedRemaining ? Math.ceil(pausedRemaining / 1000) : null);
+      return;
+    }
+    if (!roundEndTime) return;
 
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((roundEndTimeRef.current - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((roundEndTime - Date.now()) / 1000));
       setTimeLeft(remaining);
       if (remaining <= 0) {
-        stopTimer();
+        if (timerRef.current) clearInterval(timerRef.current);
         endRound();
       }
     };
 
     tick();
     timerRef.current = setInterval(tick, 1000);
-    return () => stopTimer();
-  }, [roundActive, stopTimer]);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [roundActive, roundEndTime, timerPaused, pausedRemaining]);
 
   // Auto-calculate scores when round ends and players have answers
   useEffect(() => {
@@ -137,6 +156,15 @@ const AdminPortal = () => {
     await endRound();
   };
 
+  const handlePauseResume = async () => {
+    if (timerPaused) {
+      await resumeRound(pausedRemaining);
+    } else {
+      const remaining = Math.max(0, roundEndTime - Date.now());
+      await pauseRound(remaining);
+    }
+  };
+
   const toggleScore = (playerId, letter) => {
     setScores(prev => ({
       ...prev,
@@ -156,6 +184,21 @@ const AdminPortal = () => {
     const val = e.target.value;
     setCategory(val);
     await setCategoryInDb(val);
+  };
+
+  const handleGenerateCategory = async () => {
+    setGenerating(true);
+    try {
+      const text = await generateCategoryFromAI();
+      if (text) {
+        setCategory(text);
+        await setCategoryInDb(text);
+      }
+    } catch (err) {
+      console.error('Failed to generate category:', err);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleResetGame = async () => {
@@ -186,19 +229,29 @@ const AdminPortal = () => {
 
       <div className="category-section">
         <label>Category</label>
-        <input
-          type="text"
-          value={category}
-          onChange={handleCategoryChange}
-          placeholder="Enter category..."
-        />
+        <div className="category-input-row">
+          <input
+            type="text"
+            value={category}
+            onChange={handleCategoryChange}
+            placeholder="Enter category..."
+          />
+          <button className="generate-button" onClick={handleGenerateCategory} disabled={generating}>
+            {generating ? '...' : 'Generate'}
+          </button>
+        </div>
       </div>
 
       <div className="round-controls">
         {roundActive ? (
-          <button className="round-button end" onClick={handleEndRound}>
-            End Round
-          </button>
+          <>
+            <button className="round-button end" onClick={handleEndRound}>
+              End Round
+            </button>
+            <button className="round-button pause" onClick={handlePauseResume}>
+              {timerPaused ? 'Resume' : 'Pause'}
+            </button>
+          </>
         ) : (
           <button className="round-button start" onClick={handleStartRound} disabled={!category.trim()}>
             Start Round
@@ -206,7 +259,7 @@ const AdminPortal = () => {
         )}
         <span className="round-status">
           {roundActive
-            ? timeLeft != null ? `${timeLeft}s remaining` : 'Round in progress'
+            ? timerPaused ? `PAUSED - ${timeLeft}s` : timeLeft != null ? `${timeLeft}s remaining` : 'Round in progress'
             : !category.trim() ? 'Enter a category to start' : 'Round not active'}
         </span>
       </div>
