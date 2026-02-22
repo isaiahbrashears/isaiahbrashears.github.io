@@ -34,14 +34,6 @@ const PlayerSelect = () => {
     });
   };
 
-  if (loading) {
-    return (<>
-    <div className="text-center">Loading...</div>
-    <div style={{ padding: '20px', textAlign: 'center' }}>lol my friends will never actually play</div>;
-    </>)
-
-  }
-
   if (error) {
     return <div style={{ padding: '20px', color: 'red', textAlign: 'center' }}>{error}</div>;
   }
