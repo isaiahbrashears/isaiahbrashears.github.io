@@ -13,7 +13,6 @@ import {
 
 const AdminDashboard = () => {
   const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -30,7 +29,6 @@ const AdminDashboard = () => {
     // Subscribe to real-time player updates
     const unsubscribePlayers = subscribeToPlayers((allPlayers) => {
       setPlayers(allPlayers);
-      setLoading(false);
       setError(null);
     });
 
@@ -49,14 +47,14 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  if (loading && players.length === 0) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Admin Dashboard</h2>
-        <p>Loading players...</p>
-      </div>
-    );
-  }
+  // if (loading && players.length === 0) {
+  //   return (
+  //     <div style={{ padding: '20px', textAlign: 'center' }}>
+  //       <h2>Admin Dashboard</h2>
+  //       <p>Loading players...</p>
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (
