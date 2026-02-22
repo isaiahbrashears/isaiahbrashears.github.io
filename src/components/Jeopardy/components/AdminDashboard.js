@@ -47,15 +47,6 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  // if (loading && players.length === 0) {
-  //   return (
-  //     <div style={{ padding: '20px', textAlign: 'center' }}>
-  //       <h2>Admin Dashboard</h2>
-  //       <p>Loading players...</p>
-  //     </div>
-  //   );
-  // }
-
   if (error) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -238,6 +229,35 @@ const AdminDashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {isFinalJeopardy && (
+        <div style={{ marginTop: '40px', padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Wager Status</h3>
+          <div style={{ marginBottom: '10px' }}>
+            {players.map((player) => (
+              <div
+                key={player.id}
+                style={{
+                  padding: '12px',
+                  marginBottom: '8px',
+                  backgroundColor: 'white',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontWeight: 'bold' }}>{player.name}</span>
+                  <span style={{ fontSize: '25px' }}>
+                    {player.wager ? '✅' : '❌'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
