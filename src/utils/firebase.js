@@ -6,9 +6,11 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   writeBatch,
-  increment
+  increment,
+  serverTimestamp
 } from 'firebase/firestore';
 
 // Collection references
@@ -30,6 +32,7 @@ export const initializePlayers = async (playerNames) => {
       score: 0,
       answer: '',
       wager: 0,
+      wagerSubmitted: false,
       order: index + 1
     });
   });
@@ -148,7 +151,7 @@ export const submitPlayerAnswer = async (playerId, answer) => {
  */
 export const submitPlayerWager = async (playerId, wager) => {
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
-  await updateDoc(playerRef, { wager });
+  await updateDoc(playerRef, { wager, wagerSubmitted: true });
 };
 
 /**
@@ -161,6 +164,11 @@ export const updatePlayerScore = async (playerId, pointsToAdd) => {
   await updateDoc(playerRef, {
     score: increment(pointsToAdd)
   });
+};
+
+export const setPlayerScore = async (playerId, score) => {
+  const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
+  await updateDoc(playerRef, { score });
 };
 
 /**
@@ -191,7 +199,7 @@ export const clearAllAnswers = async () => {
 
   players.forEach(player => {
     const playerRef = doc(db, PLAYERS_COLLECTION, player.id);
-    batch.update(playerRef, { answer: '' });
+    batch.update(playerRef, { answer: '', wager: 0, wagerSubmitted: false });
   });
 
   await batch.commit();
@@ -231,7 +239,8 @@ export const resetGame = async () => {
     batch.update(playerRef, {
       score: 0,
       answer: '',
-      wager: 0
+      wager: 0,
+      wagerSubmitted: false
     });
   });
 
@@ -271,6 +280,35 @@ export const updateScores = async (scores) => {
  * @param {Function} callback - Function to call with updated players array
  * @returns {Function} Unsubscribe function
  */
+/**
+ * Add a new player by name (idempotent - safe to call with existing names)
+ * @param {string} name - Player name
+ * @returns {Promise<string>} The player's doc ID
+ */
+export const addJeopardyPlayer = async (name) => {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Name cannot be empty');
+
+  const docId = trimmed.toLowerCase().replace(/\s+/g, '_');
+  const playerRef = doc(db, PLAYERS_COLLECTION, docId);
+
+  await setDoc(playerRef, {
+    name: trimmed,
+    score: 0,
+    answer: '',
+    wager: 0,
+    wagerSubmitted: false,
+    createdAt: serverTimestamp()
+  }, { merge: true });
+
+  return docId;
+};
+
+export const deleteJeopardyPlayer = async (playerId) => {
+  const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
+  await deleteDoc(playerRef);
+};
+
 export const subscribeToPlayers = (callback) => {
   const playersRef = collection(db, PLAYERS_COLLECTION);
 

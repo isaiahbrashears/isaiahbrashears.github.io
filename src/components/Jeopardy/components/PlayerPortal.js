@@ -30,8 +30,7 @@ const PlayerPortal = ({ player, playerId }) => {
       setScore(playerData.score || 0);
       setSubmittedAnswer(playerData.answer || '');
 
-      // Check if wager has been submitted
-      if (playerData.wager > 0) {
+      if (playerData.wagerSubmitted) {
         setWagerSubmitted(true);
         setSubmittedWagerValue(playerData.wager);
       } else {

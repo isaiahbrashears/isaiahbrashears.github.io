@@ -1,21 +1,24 @@
 /* eslint-disable react/prop-types */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../../../config/firebase";
-import { doc, setDoc, writeBatch } from "firebase/firestore";
+import { doc, writeBatch } from "firebase/firestore";
+import { fetchGameState } from "../../../utils/firebase";
 
 const GameSetup = () => {
-  const [players, setPlayers] = useState(['', '', '', '', '', '', '', '', '', '']);
   const [categories, setCategories] = useState(['', '', '', '', '', '']);
   const [doubleCategories, setDoubleCategories] = useState(['', '', '', '', '', '']);
   const [scores, setScores] = useState([200, 400, 600, 800, 1000]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handlePlayerChange = (index, value) => {
-    const newPlayers = [...players];
-    newPlayers[index] = value;
-    setPlayers(newPlayers);
-  };
+  useEffect(() => {
+    fetchGameState().then((gameState) => {
+      if (!gameState) return;
+      if (gameState.categories?.length) setCategories(gameState.categories);
+      if (gameState.doubleCategories?.length) setDoubleCategories(gameState.doubleCategories);
+      if (gameState.scores?.length) setScores(gameState.scores);
+    }).catch(() => {});
+  }, []);
 
   const handleCategoryChange = (index, value) => {
     const newCategories = [...categories];
@@ -44,12 +47,6 @@ const GameSetup = () => {
 
       // Add players (filter out empty names but keep track of order)
       const validPlayers = players.filter(name => name.trim() !== '');
-
-      if (validPlayers.length === 0) {
-        setMessage('Please add at least one player.');
-        setIsLoading(false);
-        return;
-      }
 
       validPlayers.forEach((name, index) => {
         const playerRef = doc(db, 'players', `player_${index + 1}`);
@@ -87,27 +84,6 @@ const GameSetup = () => {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Jeopardy Game Setup</h2>
-
-      <div style={{ marginBottom: '30px' }}>
-        <h3>Players (up to 10)</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-          {players.map((player, index) => (
-            <input
-              key={index}
-              type="text"
-              value={player}
-              onChange={(e) => handlePlayerChange(index, e.target.value)}
-              placeholder={`Player ${index + 1}`}
-              style={{
-                padding: '10px',
-                fontSize: '14px',
-                border: '2px solid #060CE9',
-                borderRadius: '6px'
-              }}
-            />
-          ))}
-        </div>
-      </div>
 
       <div style={{ marginBottom: '30px' }}>
         <h3>Round 1 Categories (6)</h3>
@@ -216,11 +192,10 @@ const GameSetup = () => {
       <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
         <h4>Instructions:</h4>
         <ol style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
-          <li>Enter player names (leave blank for fewer players)</li>
           <li>Enter your 6 Round 1 category names</li>
           <li>Enter your 6 Double Jeopardy category names (point values are doubled)</li>
           <li>Adjust point values if needed (default: 200, 400, 600, 800, 1000)</li>
-          <li>Click "Initialize Game" to set up the database</li>
+          <li>Click &quot;Initialize Game&quot; to set up the database</li>
           <li>After setup, go to <strong>/jeopardy</strong> to start playing!</li>
         </ol>
       </div>

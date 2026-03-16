@@ -5,10 +5,12 @@ import {
   subscribeToGameState,
   clearAllAnswers,
   updatePlayerScore,
+  setPlayerScore,
   advanceToNextQuestion,
   setFinalJeopardy,
   setDoubleJeopardy,
-  resetGame
+  resetGame,
+  deleteJeopardyPlayer
 } from "../../../utils/firebase";
 
 const AdminDashboard = () => {
@@ -22,6 +24,8 @@ const AdminDashboard = () => {
   const [isFinalJeopardy, setIsFinalJeopardy] = useState(false);
   const [isDoubleJeopardy, setIsDoubleJeopardy] = useState(false);
   const [isResettingGame, setIsResettingGame] = useState(false);
+  const [playersEditable, setPlayersEditable] = useState(false);
+  const [editScores, setEditScores] = useState({});
   const [isTogglingFinalJeopardy, setIsTogglingFinalJeopardy] = useState(false);
   const [isTogglingDoubleJeopardy, setIsTogglingDoubleJeopardy] = useState(false);
 
@@ -56,6 +60,22 @@ const AdminDashboard = () => {
     );
   }
 
+  const togglePlayerEditability = () => {
+    if (!playersEditable) {
+      const scores = {};
+      players.forEach(p => { scores[p.id] = p.score; });
+      setEditScores(scores);
+    }
+    setPlayersEditable(!playersEditable);
+  };
+
+  const handleScoreBlur = async (playerId) => {
+    const newScore = parseInt(editScores[playerId], 10);
+    if (!isNaN(newScore)) {
+      await setPlayerScore(playerId, newScore);
+    }
+  };
+
   // Sort by score descending
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
@@ -74,27 +94,22 @@ const AdminDashboard = () => {
   const handleSubmitAnswers = async () => {
     setIsResetting(true);
     try {
-      // Submit scores for all correct answers
-      const updatePromises = Object.entries(selectedAnswers).map(([playerId, status]) => {
-        if (isFinalJeopardy) {
-          // In Final Jeopardy, use wager amount from player data
-          const player = players.find(p => p.id === playerId);
+      let updatePromises;
+      if (isFinalJeopardy) {
+        // In Final Jeopardy, apply to all players: add wager if correct, subtract otherwise
+        updatePromises = players.map((player) => {
           const wagerAmount = player?.wager || 0;
-
-          if (status === 'correct') {
-            return updatePlayerScore(playerId, wagerAmount);
-          } else if (status === 'incorrect') {
-            // Subtract wager for incorrect answers
-            return updatePlayerScore(playerId, -wagerAmount);
-          }
-        } else {
-          // Regular questions: add currentScore for correct answers only
+          const isCorrect = selectedAnswers[player.id] === 'correct';
+          return updatePlayerScore(player.id, isCorrect ? wagerAmount : -wagerAmount);
+        });
+      } else {
+        updatePromises = Object.entries(selectedAnswers).map(([playerId, status]) => {
           if (status === 'correct') {
             return updatePlayerScore(playerId, currentScore);
           }
-        }
-        return Promise.resolve();
-      });
+          return Promise.resolve();
+        });
+      }
 
       await Promise.all(updatePromises);
 
@@ -149,6 +164,16 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleDeletePlayer = async (player) => {
+    if (!window.confirm(`Remove ${player.name} from the game?`)) return;
+    try {
+      await deleteJeopardyPlayer(player.id);
+    } catch (err) {
+      console.error('Error deleting player:', err);
+      alert('Failed to remove player. Please try again.');
+    }
+  };
+
   const handleToggleDoubleJeopardy = async () => {
     setIsTogglingDoubleJeopardy(true);
     try {
@@ -200,13 +225,19 @@ const AdminDashboard = () => {
         </div>
       ) : (
         <div>
-          <h3 style={{ marginBottom: '20px' }}>Leaderboard</h3>
+          <div className="flex items-center justify-between">
+            <h3 style={{ marginBottom: '20px' }}>Leaderboard</h3>
+            <a onClick={togglePlayerEditability} style={{ cursor: 'pointer', color: '#c62828' }}>
+              {playersEditable ? 'Done Editing' : 'Edit Players'}
+            </a>
+          </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#060CE9', color: 'white' }}>
                 <th style={{ padding: '12px', textAlign: 'left', borderRadius: '8px 0 0 0' }}>Rank</th>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Player</th>
-                <th style={{ padding: '12px', textAlign: 'right', borderRadius: '0 8px 0 0' }}>Score</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Score</th>
+                <th style={{ padding: '12px', borderRadius: '0 8px 0 0' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -223,8 +254,43 @@ const AdminDashboard = () => {
                   </td>
                   <td style={{ padding: '12px', fontSize: '16px' }}>{player.name}</td>
                   <td style={{ padding: '12px', textAlign: 'right', fontSize: '16px', fontWeight: 'bold' }}>
-                    {player.score}
+                    {playersEditable ? (
+                      <input
+                        type="number"
+                        value={editScores[player.id] ?? player.score}
+                        onChange={(e) => setEditScores(prev => ({ ...prev, [player.id]: e.target.value }))}
+                        onBlur={() => handleScoreBlur(player.id)}
+                        style={{
+                          width: '80px',
+                          padding: '4px 8px',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          textAlign: 'right',
+                          border: '2px solid #060CE9',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    ) : player.score}
                   </td>
+                  {playersEditable && (
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleDeletePlayer(player)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          color: '#c62828'
+                        }}
+                        title="Remove player"
+                        >
+                        ✕
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -252,7 +318,7 @@ const AdminDashboard = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontWeight: 'bold' }}>{player.name}</span>
                   <span style={{ fontSize: '25px' }}>
-                    {player.wager ? '✅' : '❌'}
+                    {player.wagerSubmitted ? '✅' : '❌'}
                   </span>
                 </div>
               </div>
