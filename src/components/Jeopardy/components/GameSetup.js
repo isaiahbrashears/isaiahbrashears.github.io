@@ -45,20 +45,6 @@ const GameSetup = () => {
     try {
       const batch = writeBatch(db);
 
-      // Add players (filter out empty names but keep track of order)
-      const validPlayers = players.filter(name => name.trim() !== '');
-
-      validPlayers.forEach((name, index) => {
-        const playerRef = doc(db, 'players', `player_${index + 1}`);
-        batch.set(playerRef, {
-          name: name.trim(),
-          score: 0,
-          answer: '',
-          wager: 0,
-          order: index + 1
-        });
-      });
-
       // Set up game state
       const gameStateRef = doc(db, 'game', 'gameState');
       batch.set(gameStateRef, {
