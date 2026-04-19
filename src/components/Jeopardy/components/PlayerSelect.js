@@ -91,6 +91,10 @@ const PlayerSelect = () => {
         <p className="text-center">No players yet. Be the first to join!</p>
       )}
 
+      <div className="divider">
+        <span>or</span>
+      </div>
+
       <div className="admin-link">
         <button
           onClick={() => navigate('/jeopardy/admin')}
