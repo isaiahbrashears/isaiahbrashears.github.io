@@ -32,11 +32,17 @@ module.exports = {
         test: /\.svg$/,  // Rule to handle SVG files
         use: ['@svgr/webpack'],
       },
+      {
+        test: /\.png$/,
+        type: 'asset/resource',
+        generator: { filename: '[name][ext]' }
+      }
     ],
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
+      favicon: './src/assets/images/favicon.ico',
     }),
   ],
   devServer: {
