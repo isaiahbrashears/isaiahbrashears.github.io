@@ -58,7 +58,12 @@ const Jeopardy = () => {
 
   // If player found, show player portal
   if (playerId) {
-    return <PlayerPortal player={decodeURIComponent(playerName)} playerId={playerId} />;
+    return (
+      <PlayerPortal
+        player={decodeURIComponent(playerName)}
+        playerId={playerId}
+      />
+    );
   }
 
   // If player not found, show error

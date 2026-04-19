@@ -4,10 +4,12 @@ import {
   submitPlayerAnswer,
   submitPlayerWager,
   subscribeToPlayer,
-  subscribeToGameState
+  subscribeToGameState,
+  updatePlayerScore,
+  advanceToNextQuestion
 } from "../../../utils/firebase";
 
-const PlayerPortal = ({ player, playerId }) => {
+const PlayerPortal = ({ player, playerId}) => {
   const [answer, setAnswer] = useState('');
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,6 +22,7 @@ const PlayerPortal = ({ player, playerId }) => {
   const [currentScore, setCurrentScore] = useState(0);
   const [wager, setWager] = useState(0);
   const [wagerSubmitted, setWagerSubmitted] = useState(false);
+  const [singlePlayer, setSinglePlayer] = useState(0);
   const [submittedWagerValue, setSubmittedWagerValue] = useState(0);
 
   useEffect(() => {
@@ -110,6 +113,29 @@ const PlayerPortal = ({ player, playerId }) => {
       setWager(numValue);
     }
   };
+
+  const isaiahAliases = ['isaiah brashears', 'wavyzayb', 'zayb', 'isaiah', 'zay', 'wavyzay', 'brashears', 'brash', 'comic god', 'the one who remains'];
+  let toggleSinglePlayerButtons = null;
+
+  const toggleSinglePlayer = () => {
+    setSinglePlayer((prev) => !prev);
+  };
+
+  if (isaiahAliases.includes(player.toLowerCase()) && !submittedAnswer && score === 0) {
+    toggleSinglePlayerButtons = (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Welcome, Master!</h2>
+        <p style={{ fontSize: '18px' }}>Are you playing solo or with the chumps?</p>
+        <button
+          onClick={toggleSinglePlayer}
+          className="player-button"
+          style={{ marginTop: '20px', fontSize: '18px', padding: '16px 32px', backgroundColor: '#2e7d32', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          {singlePlayer ? 'Exit Single Player Mode' : 'Enter Single Player Mode'}
+        </button>
+      </div>
+    );
+  }
 
   // Wager input for Final Jeopardy (shown first, before answer)
   const wagerInput = (
@@ -227,13 +253,72 @@ const PlayerPortal = ({ player, playerId }) => {
     </div>
   );
 
+  const handleSinglePlayerAnswer = async (correct) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      if (correct) {
+        await updatePlayerScore(playerId, currentScore);
+      }
+      await advanceToNextQuestion();
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const singlePlayerButtons = (
+    <div style={{ display: 'flex', gap: '16px', marginTop: '50px' }}>
+      <button
+        onClick={() => handleSinglePlayerAnswer(true)}
+        disabled={isSubmitting}
+        style={{
+          flex: 1,
+          padding: '20px',
+          fontSize: '20px',
+          fontWeight: 'bold',
+          backgroundColor: isSubmitting ? '#ccc' : '#2e7d32',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: isSubmitting ? 'not-allowed' : 'pointer'
+        }}
+      >
+        Correct
+      </button>
+      <button
+        onClick={() => handleSinglePlayerAnswer(false)}
+        disabled={isSubmitting}
+        style={{
+          flex: 1,
+          padding: '20px',
+          fontSize: '20px',
+          fontWeight: 'bold',
+          backgroundColor: isSubmitting ? '#ccc' : '#c62828',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: isSubmitting ? 'not-allowed' : 'pointer'
+        }}
+      >
+        Incorrect
+      </button>
+      {error && (
+        <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>
+      )}
+    </div>
+  );
+
   // Determine what to display based on Final Jeopardy state
   let answerDisplay;
 
-  if (isFinalJeopardy) {
+  if (singlePlayer) {
+    answerDisplay = singlePlayerButtons;
+  } else if (isFinalJeopardy) {
     // Final Jeopardy: Show wager first, then answer
     if (submittedAnswer) {
-      // Both wager and answer submitted
       answerDisplay = (
         <div>
           {wagerSubmittedDisplay}
@@ -241,7 +326,6 @@ const PlayerPortal = ({ player, playerId }) => {
         </div>
       );
     } else if (wagerSubmitted) {
-      // Wager submitted, now show answer input
       answerDisplay = (
         <div>
           {wagerSubmittedDisplay}
@@ -249,7 +333,6 @@ const PlayerPortal = ({ player, playerId }) => {
         </div>
       );
     } else {
-      // Show wager input first
       answerDisplay = wagerInput;
     }
   } else {
@@ -289,6 +372,7 @@ const PlayerPortal = ({ player, playerId }) => {
       )}
       <h3 style={{ marginBottom: '10px' }}>Your Score: ${loadingScore ? 'Loading...' : score}</h3>
       {answerDisplay}
+      {toggleSinglePlayerButtons}
     </div>
   );
 };
