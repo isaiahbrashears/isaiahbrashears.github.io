@@ -9,7 +9,7 @@ import Scatagories from './Scatagories';
 
 const Home = () => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', alignItems: 'center', minHeight: '20vh' }}>
+    <div className="home-screen">
       <Link to="/jeopardy" style={{
         padding: '16px 32px',
         fontSize: '18px',

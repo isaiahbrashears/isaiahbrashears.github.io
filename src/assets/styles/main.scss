@@ -7,8 +7,18 @@ body {
   color: $text-color;
 }
 
+
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  min-height: 20vh;
+  padding-top: 60px;
+}
+
 .wizard-container {
-  padding: 2rem;
   margin: auto;
 
   .fade-in {

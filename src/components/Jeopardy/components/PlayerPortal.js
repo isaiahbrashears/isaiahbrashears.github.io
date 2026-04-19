@@ -341,7 +341,7 @@ const PlayerPortal = ({ player, playerId}) => {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }} className="jeopardy">
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
       <h2>{player}</h2>
       {isFinalJeopardy ? (
         <div style={{
