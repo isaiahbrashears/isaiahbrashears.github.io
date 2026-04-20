@@ -121,11 +121,15 @@ const PlayerPortal = ({ player, playerId}) => {
     setSinglePlayer((prev) => !prev);
   };
 
-  if (isaiahAliases.includes(player.toLowerCase()) && !submittedAnswer && score === 0) {
+  if (isaiahAliases.includes(player.toLowerCase()) ) {
     toggleSinglePlayerButtons = (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Welcome, Master!</h2>
-        <p style={{ fontSize: '18px' }}>Are you playing solo or with the chumps?</p>
+        {!submittedAnswer && score === 0 && (
+          <>
+            <h2>Welcome, Master!</h2>
+            <p style={{ fontSize: '18px' }}>Are you playing solo or with the chumps?</p>
+          </>
+        )}
         <button
           onClick={toggleSinglePlayer}
           className="player-button"
