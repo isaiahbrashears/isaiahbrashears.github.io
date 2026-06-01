@@ -88,6 +88,19 @@ const AdminDashboard = () => {
   const handleSubmitAnswers = async () => {
     setIsResetting(true);
     try {
+      const correctInOrder = players
+        .filter(p => selectedAnswers[p.id] === 'correct' && p.submittedAt)
+        .sort((a, b) => {
+          const aTime = a.submittedAt.toMillis ? a.submittedAt.toMillis() : a.submittedAt;
+          const bTime = b.submittedAt.toMillis ? b.submittedAt.toMillis() : b.submittedAt;
+          return aTime - bTime;
+        });
+      // if (correctInOrder.length > 0) {
+      //   correctInOrder.forEach((p, i) => console.log(`  ${i + 1}. ${p.name}`))
+      //   await updatePlayerScore(correctInOrder[0].id, 100);
+      //   await updatePlayerScore(correctInOrder[1].id, 50);
+      // }
+
       let updatePromises;
       if (isFinalJeopardy) {
         updatePromises = players.map((player) => {
@@ -269,10 +282,28 @@ const AdminDashboard = () => {
       <div className="answer-status">
         <h3>Answer Status</h3>
         <div className="answer-status__list">
-          {players.map((player) => (
+          {[...players]
+            .sort((a, b) => {
+              if (!a.submittedAt && !b.submittedAt) return 0;
+              if (!a.submittedAt) return 1;
+              if (!b.submittedAt) return -1;
+              const aTime = a.submittedAt.toMillis ? a.submittedAt.toMillis() : a.submittedAt;
+              const bTime = b.submittedAt.toMillis ? b.submittedAt.toMillis() : b.submittedAt;
+              return aTime - bTime;
+            })
+            .map((player) => {
+              const submitOrder = players.filter(p => p.submittedAt).sort((a, b) => {
+                const aTime = a.submittedAt.toMillis ? a.submittedAt.toMillis() : a.submittedAt;
+                const bTime = b.submittedAt.toMillis ? b.submittedAt.toMillis() : b.submittedAt;
+                return aTime - bTime;
+              }).findIndex(p => p.id === player.id);
+              return (
             <div key={player.id} className="answer-row">
               <div className={`answer-row__header${showAnswers && player.answer ? ' answer-row__header--expanded' : ''}`}>
                 <div className="answer-row__player">
+                  {player.submittedAt && (
+                    <span className="answer-row__order">#{submitOrder + 1}</span>
+                  )}
                   <span className="answer-row__name">{player.name}</span>
                   <span className="answer-row__status">
                     {player.answer ? '✅' : '❌'}
@@ -310,7 +341,8 @@ const AdminDashboard = () => {
                 </div>
               )}
             </div>
-          ))}
+          );
+            })}
         </div>
 
         <button

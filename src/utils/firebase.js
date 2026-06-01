@@ -141,7 +141,7 @@ export const fetchCurrentCategoryAndScore = async () => {
  */
 export const submitPlayerAnswer = async (playerId, answer) => {
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
-  await updateDoc(playerRef, { answer });
+  await updateDoc(playerRef, { answer, submittedAt: serverTimestamp() });
 };
 
 /**
@@ -199,7 +199,7 @@ export const clearAllAnswers = async () => {
 
   players.forEach(player => {
     const playerRef = doc(db, PLAYERS_COLLECTION, player.id);
-    batch.update(playerRef, { answer: '', wager: 0, wagerSubmitted: false });
+    batch.update(playerRef, { answer: '', wager: 0, wagerSubmitted: false, submittedAt: null });
   });
 
   await batch.commit();
