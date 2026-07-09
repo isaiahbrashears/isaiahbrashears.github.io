@@ -6,6 +6,7 @@ import Jeopardy from './Jeopardy';
 import AdminDashboard from './Jeopardy/components/AdminDashboard';
 import GameSetup from './Jeopardy/components/GameSetup';
 import Scatagories from './Scatagories';
+import PlayerPortal from './FifaDraft/components/PlayerPortal';
 
 const Home = () => {
   return (
@@ -54,6 +55,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/fifa-draft" element={<FifaDraft />} />
+          <Route path="/fifa-draft/:playerName" element={<PlayerPortal />} />
           <Route path="/jeopardy" element={<Jeopardy />} />
           <Route path="/jeopardy/setup" element={<GameSetup />} />
           <Route path="/jeopardy/admin" element={<AdminDashboard />} />
