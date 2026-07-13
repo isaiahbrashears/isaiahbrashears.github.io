@@ -17,7 +17,6 @@ const WheelComponent
  = ({ OPTIONS = [], setValue = () => {}, setCategory = () => {}  }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [winner, setWinner] = useState(null);
   const animationRef = useRef(null);
 
   // Calculate total weight and segment angles
@@ -55,7 +54,6 @@ const WheelComponent
     if (isSpinning) return;
 
     setIsSpinning(true);
-    setWinner(null);
 
     // Random number of spins + random angle
     const spins = 5 + Math.random() * 3;
@@ -85,7 +83,6 @@ const WheelComponent
         const winningSegment = segments.find(seg =>
           normalizedRotation >= seg.startAngle && normalizedRotation < seg.endAngle
         );
-        setWinner(winningSegment ? winningSegment.name : OPTIONS[0].name);
         setValue(winningSegment)
         setCategory(winningSegment.name)
       }

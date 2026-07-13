@@ -10,11 +10,12 @@ import {
 } from "../../../utils/fifaFirebase";
 import LeagueWheel from './wheels/LeagueWheel';
 import NationalityWheel from "./wheels/NationalityWheel";
-
-import '../fifa.scss'
-import CategoryWheel from "./wheels/CategoryWheel";
-import { lightenColor } from "../../../utils/lightenColor";
 import NumberWheel from "./wheels/NumberWheel";
+import RatingWheel from "./wheels/RatingWheel";
+import CategoryWheel from "./wheels/CategoryWheel";
+
+import { lightenColor } from "../../../utils/lightenColor";
+import '../fifa.scss'
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +27,8 @@ const AdminDashboard = () => {
     Category: CategoryWheel,
     League: LeagueWheel,
     Nationality: NationalityWheel,
-    Number: NumberWheel
+    Number: NumberWheel,
+    Rating: RatingWheel
   }
 
   const WheelComponent = wheels[currentCategory];
