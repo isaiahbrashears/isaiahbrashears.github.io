@@ -14,6 +14,7 @@ import NationalityWheel from "./wheels/NationalityWheel";
 import '../fifa.scss'
 import CategoryWheel from "./wheels/CategoryWheel";
 import { lightenColor } from "../../../utils/lightenColor";
+import NumberWheel from "./wheels/NumberWheel";
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +26,7 @@ const AdminDashboard = () => {
     Category: CategoryWheel,
     League: LeagueWheel,
     Nationality: NationalityWheel,
+    Number: NumberWheel
   }
 
   const WheelComponent = wheels[currentCategory];
@@ -103,22 +105,28 @@ const AdminDashboard = () => {
         : <p className="text-center">Loading...</p>
       }
 
-      <button
-      onClick={() => handleReset()}>
-        New Category
-      </button>
+
     </div>
 
     <div className="fifa-draft-player-tracking">
       <h1 className="text-center">Admin Portal</h1>
       <div>
-        {console.log(drafters)
-        }
         {drafters.map((drafter) => {
           return (
-            <button onClick={() => deleteDrafter(drafter.id)}>Delete {drafter.name}</button>
+            <button key={drafter.id} onClick={() => deleteDrafter(drafter.id)}>Delete {drafter.name}</button>
           )
         })}
+
+      <button
+          className="new-category-btn button passed-color m-auto"
+          style={{
+            '--button-color': '#ffdf00',
+            '--button-text-color': 'black',
+          }}
+          onClick={() => handleReset()
+        }>
+        Reset Category
+      </button>
       </div>
     </div>
    </div>

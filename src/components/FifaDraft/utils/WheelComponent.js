@@ -231,8 +231,18 @@ const WheelComponent
           ))}
 
           {/* Center circle */}
-          <circle cx={SIZE / 2} cy={SIZE / 2} r={30 * SCALE} fill="#2c3e50" stroke="white" strokeWidth={4 * SCALE} />
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={30 * SCALE}
+            fill="#2c3e50"
+            stroke="white"
+            strokeWidth={4 * SCALE}
+            onClick={handleSpin}
+            className="wheel-center"
+          />
           <text
+            onClick={handleSpin}
             x={SIZE / 2}
             y={SIZE / 2}
             fill="white"
@@ -240,47 +250,12 @@ const WheelComponent
             fontWeight="bold"
             textAnchor="middle"
             dominantBaseline="middle"
+            className="wheel-center-text"
           >
-            SPIN
+            Spin
           </text>
         </svg>
       </div>
-
-      <button
-        onClick={handleSpin}
-        disabled={isSpinning}
-        style={{
-          padding: '18px 50px',
-          fontSize: '20px',
-          fontWeight: 'bold',
-          color: 'white',
-          background: isSpinning
-            ? 'linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)'
-            : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-          border: 'none',
-          borderRadius: '50px',
-          cursor: isSpinning ? 'not-allowed' : 'pointer',
-          boxShadow: '0 6px 12px rgba(0,0,0,0.3)',
-          transition: 'all 0.3s ease',
-          transform: isSpinning ? 'scale(0.95)' : 'scale(1)',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
-        }}
-        onMouseEnter={(e) => {
-          if (!isSpinning) {
-            e.target.style.transform = 'scale(1.05)';
-            e.target.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSpinning) {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
-          }
-        }}
-      >
-        {isSpinning ? '🎲 SPINNING...' : 'SPIN'}
-      </button>
 
       <style>{`
         @keyframes fadeIn {

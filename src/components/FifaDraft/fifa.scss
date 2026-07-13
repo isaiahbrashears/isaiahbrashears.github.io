@@ -5,9 +5,13 @@
 
 .fifa-draft-wheels {
   background: black;
-  color: red;
+  color: #ffdf00;
   width: 100%;
   min-height: 100vh;
+
+  h2 {
+    font-size: 42px;
+  }
 }
 
 .fifa-draft-player-tracking {
@@ -31,4 +35,7 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
     animation: fadeIn 0.5s ease-in;
     background: linear-gradient(135deg, var(--rule-color) 0%, var(--rule-color-light) 100%)
+}
+
+.new-category-btn {
 }

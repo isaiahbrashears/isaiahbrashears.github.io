@@ -4,6 +4,7 @@ import WheelComponent from '../../utils/WheelComponent';
 const CATEGORIES = [
   { name: 'Nationality', color: '#38003c', shortName: 'Nationality', weight: 7, icon: '' },
   { name: 'League', color: '#D3AF37', shortName: 'League', weight: 7, icon: '' },
+  { name: 'Number', color: '#085418', shortName: 'Number', weight: 7, icon: '' },
 ];
 
 const CategoryWheel = ({ setCurrentCategory }) => {
