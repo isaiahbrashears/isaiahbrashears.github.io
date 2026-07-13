@@ -97,7 +97,7 @@ const PlayerSelect = () => {
 
       <div className="admin-link">
         <button
-          onClick={() => navigate('/jeopardy/admin')}
+          onClick={() => navigate('/fifa-draft/admin')}
           className="admin-link-button"
         >
           Admin Portal

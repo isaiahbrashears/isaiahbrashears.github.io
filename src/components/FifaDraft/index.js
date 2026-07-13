@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import PlayerSelect from './components/PlayerSelect';
 import { findFifaPlayerByName } from '../../utils/fifaFirebase';
 import PlayerPortal from './components/PlayerPortal';
+import AdminDashboard from './components/AdminDashboard';
 
 
 const FifaDraft = () => {
@@ -40,6 +41,10 @@ const FifaDraft = () => {
         setLoading(false);
       }
     }, [playerName, location.state?.playerId]);
+
+  if (playerName === 'admin') {
+    return <AdminDashboard />;
+  }
 
   if (playerId) {
     return (
