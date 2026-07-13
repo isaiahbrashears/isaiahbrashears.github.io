@@ -16,7 +16,7 @@
 
 .fifa-draft-player-tracking {
   background-color: white;
-  color: green;
+  color: black;
   width: 100%;
   min-height: 100vh;
 }
@@ -37,5 +37,56 @@
     background: linear-gradient(135deg, var(--rule-color) 0%, var(--rule-color-light) 100%)
 }
 
-.new-category-btn {
+.wheel-center {
+  &:hover {
+    cursor: pointer;
+  }
+}
+.wheel-center-text {
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.fifa-player-portal {
+  background: white;
+  color: black;
+  min-height: 100vh;
+}
+
+.fifa-admin-buttons {
+  max-width: 25rem;
+  margin: auto;
+}
+.fifa-draft-order {
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &-active {
+    font-weight: bold;
+    color: #2980b9;
+  }
+}
+
+.fifa-drafters-container {
+  display: flex;
+  color: black;
+
+  .admins-drafter-table {
+    padding-left: .5rem;
+    padding-right: .5rem;
+  }
+}
+
+.fifa-draft-order-list {
+  li {
+    margin-bottom: .5rem;
+    max-width: 15rem;
+    width: 100%;
+    display: flex;
+
+  }
 }

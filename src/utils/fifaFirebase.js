@@ -10,7 +10,8 @@ import {
   onSnapshot,
   writeBatch,
   increment,
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion
 } from 'firebase/firestore';
 
 // Collection references
@@ -108,36 +109,30 @@ export const fetchFifaGameState = async () => {
   // Return default state if not initialized
   return {
     categoryIndex: 0,
-    scoreIndex: 0,
-    isFinalJeopardy: false,
   };
 };
 
 /**
- * Get current category and score from game state
- * @returns {Promise<Object>} Current category, score, and final jeopardy status
- */
-export const fetchCurrentCategoryAndScore = async () => {
-  const gameState = await fetchFifaGameState();
-
-  const categoryIndex = gameState.scoreIndex % 6;  // Which category (0-5)
-
-  return {
-    category: gameState.categories[categoryIndex] || '',
-    categoryIndex,
-    scoreIndex: gameState.scoreIndex,
-    isFinalJeopardy: gameState.isFinalJeopardy
-  };
-};
-
-/**
- * Submit a player's answer
+ * Submit a drafted player: records it as the player's last draft, appends it
+ * to their running draftedPlayerList, and advances the draft turn to the next drafter
  * @param {string} playerId - The player's document ID
- * @param {string} answer - The answer text
+ * @param {{ name: string, currentCategory: string, currentRule: string }} draftedPlayer - The drafted player entry
+ * @param {number} nextTurnIndex - Index into the draft order that should become active next
  */
-export const submitPlayerAnswer = async (playerId, answer) => {
+export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex) => {
+  const batch = writeBatch(db);
+
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
-  await updateDoc(playerRef, { answer, submittedAt: serverTimestamp() });
+  batch.update(playerRef, {
+    lastDraft: draftedPlayer,
+    draftedPlayerList: arrayUnion(draftedPlayer),
+    submittedAt: serverTimestamp()
+  });
+
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex }, { merge: true });
+
+  await batch.commit();
 };
 
 export const setPlayerScore = async (playerId, score) => {
@@ -189,6 +184,76 @@ export const subscribeToFifaCurrentCategory = (callback) => {
 
   return onSnapshot(gameStateRef, (snapshot) => {
     callback(snapshot.exists() ? snapshot.data().currentCategory : undefined);
+  });
+};
+
+/**
+ * Save the current FIFA draft round (1-15)
+ * @param {number} round - The round number
+ */
+export const setFifaCurrentRound = async (round) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { currentRound: round }, { merge: true });
+};
+
+/**
+ * Subscribe to the current FIFA draft round (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the current round number (or undefined)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaCurrentRound = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data().currentRound : undefined);
+  });
+};
+
+/**
+ * Save the draft order (array of player document IDs) and reset the turn
+ * back to the first drafter in that order
+ * @param {Array<string>} playerIds - Ordered array of player document IDs
+ */
+export const setFifaDraftOrder = async (playerIds) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { draftOrder: playerIds, currentTurnIndex: 0 }, { merge: true });
+};
+
+/**
+ * Subscribe to the current draft order (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the draft order array (or undefined)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaDraftOrder = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data().draftOrder : undefined);
+  });
+};
+
+/**
+ * Save whose turn it currently is (index into the draft order)
+ * @param {number} index - Index into the draft order
+ */
+export const setFifaCurrentTurnIndex = async (index) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { currentTurnIndex: index }, { merge: true });
+};
+
+/**
+ * Subscribe to whose turn it currently is (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the current turn index (or undefined)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaCurrentTurnIndex = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data().currentTurnIndex : undefined);
   });
 };
 

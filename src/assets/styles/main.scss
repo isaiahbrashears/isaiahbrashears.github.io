@@ -1,5 +1,6 @@
 @import 'variables';
 @import 'common';
+@import 'fifa';
 
 body {
   font-family: 'Courier';
@@ -220,16 +221,5 @@ body {
         text-decoration: underline;
       }
     }
-  }
-}
-
-.wheel-center {
-  &:hover {
-    cursor: pointer;
-  }
-}
-.wheel-center-text {
-  &:hover {
-    cursor: pointer;
   }
 }

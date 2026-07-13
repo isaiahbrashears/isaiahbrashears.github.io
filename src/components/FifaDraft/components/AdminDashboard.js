@@ -5,8 +5,13 @@ import {
   subscribeToFifaCurrentCategory,
   setFifaCurrentRule,
   subscribeToFifaCurrentRule,
+  setFifaCurrentRound,
+  subscribeToFifaCurrentRound,
+  setFifaDraftOrder,
+  subscribeToFifaDraftOrder,
+  setFifaCurrentTurnIndex,
+  subscribeToFifaCurrentTurnIndex,
   subscribeToPlayers,
-  deleteFifaPlayer
 } from "../../../utils/fifaFirebase";
 import LeagueWheel from './wheels/LeagueWheel';
 import NationalityWheel from "./wheels/NationalityWheel";
@@ -15,13 +20,18 @@ import RatingWheel from "./wheels/RatingWheel";
 import CategoryWheel from "./wheels/CategoryWheel";
 
 import { lightenColor } from "../../../utils/lightenColor";
-import '../fifa.scss'
+import AdminDrafterTable from "./AdminDrafterTable";
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [draftOrderEditable, setDraftOrderEditable] = useState(false);
+  const [adminButtonsVisible, setAdminButtonsVisible] = useState(false);
   const [currentCategory, setCurrentCategory] = useState('Category');
   const [currentRule, setCurrentRule] = useState({});
+  const [currentRound, setCurrentRound] = useState(1);
   const [drafters, setDrafters] = useState([]);
+  const [draftOrder, setDraftOrder] = useState([]);
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
 
   const wheels = {
     Category: CategoryWheel,
@@ -47,16 +57,33 @@ const AdminDashboard = () => {
         }
     })
 
+    const unsubscribeRound = subscribeToFifaCurrentRound((round) => {
+        if (round) {
+          setCurrentRound(round)
+        }
+    })
+
     const unsubscribeDrafters = subscribeToPlayers((players) => {
         if (players) {
           setDrafters(players)
         }
     })
 
+    const unsubscribeDraftOrder = subscribeToFifaDraftOrder((order) => {
+        setDraftOrder(order || [])
+    })
+
+    const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
+        setCurrentTurnIndex(typeof index === 'number' ? index : 0)
+    })
+
     return () => {
       if (unsubscribeCategory) unsubscribeCategory();
       if (unsubscribeRule) unsubscribeRule();
+      if (unsubscribeRound) unsubscribeRound();
       if (unsubscribeDrafters) unsubscribeDrafters();
+      if (unsubscribeDraftOrder) unsubscribeDraftOrder();
+      if (unsubscribeTurnIndex) unsubscribeTurnIndex();
     };
   }, []);
 
@@ -82,10 +109,44 @@ const AdminDashboard = () => {
     handleCategoryChange('Category')
   };
 
-  const deleteDrafter = (playerId) => {
-    deleteFifaPlayer(playerId)
-  }
 
+
+  const handleNextRound = () => {
+    const nextRound = Math.min(currentRound + 1, 15);
+    setCurrentRound(nextRound);
+    setFifaCurrentRound(nextRound).catch((err) => {
+      console.error('Error saving round:', err);
+    });
+    setCurrentTurnIndex(0);
+    setFifaCurrentTurnIndex(0).catch((err) => {
+      console.error('Error resetting turn:', err);
+    });
+  };
+
+  const orderedDrafters = [
+    ...draftOrder.map((id) => drafters.find((drafter) => drafter.id === id)).filter(Boolean),
+    ...drafters.filter((drafter) => !draftOrder.includes(drafter.id)),
+  ];
+
+  const moveDraftOrderEntry = (index, direction) => {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= draftOrder.length) return;
+
+    const newOrder = [...draftOrder];
+    [newOrder[index], newOrder[swapIndex]] = [newOrder[swapIndex], newOrder[index]];
+    setDraftOrder(newOrder);
+    setFifaDraftOrder(newOrder).catch((err) => {
+      console.error('Error saving draft order:', err);
+    });
+  };
+
+   const handlePrevRound = () => {
+    const nextRound = Math.min(currentRound - 1, 15);
+    setCurrentRound(nextRound);
+    setFifaCurrentRound(nextRound).catch((err) => {
+      console.error('Error saving round:', err);
+    });
+  };
   return (
    <div className="fifa-draft-admin-Dashboard">
     <div className="fifa-draft-wheels">
@@ -106,30 +167,118 @@ const AdminDashboard = () => {
           />
         : <p className="text-center">Loading...</p>
       }
-
-
     </div>
 
     <div className="fifa-draft-player-tracking">
       <h1 className="text-center">Admin Portal</h1>
-      <div>
-        {drafters.map((drafter) => {
+      <h2 className="text-center">Round {currentRound} / 15</h2>
+      <div className="fifa-drafters-container">
+        {orderedDrafters.map((drafter, index) => {
           return (
-            <button key={drafter.id} onClick={() => deleteDrafter(drafter.id)}>Delete {drafter.name}</button>
+            <AdminDrafterTable
+              key={drafter.id}
+              drafter={drafter}
+              currentTurnIndex={currentTurnIndex}
+              index={index}
+            />
           )
         })}
+      </div>
 
-      <button
+      <div>
+        <button
           className="new-category-btn button passed-color m-auto"
+          disabled={currentRound <= 1}
           style={{
             '--button-color': '#ffdf00',
             '--button-text-color': 'black',
           }}
-          onClick={() => handleReset()
+          onClick={() => setAdminButtonsVisible(!adminButtonsVisible)
         }>
-        Reset Category
-      </button>
+          Admin Functions
+        </button>
       </div>
+      {adminButtonsVisible && (
+
+        <div className="fifa-admin-buttons">
+          <div className="flex mb-4">
+            <button
+                className="new-category-btn button passed-color m-auto"
+                disabled={currentRound <= 1}
+                style={{
+                  '--button-color': '#6f1515',
+                  '--button-text-color': 'white',
+                }}
+                onClick={() => handlePrevRound()
+                }>
+              Prev Round
+            </button>
+            <button
+                className="new-category-btn button passed-color m-auto"
+                disabled={currentRound >= 15}
+                style={{
+                  '--button-color': '#2980b9',
+                  '--button-text-color': 'white',
+                }}
+                onClick={() => handleNextRound()
+                }>
+              Next Round
+            </button>
+          </div>
+          <button
+            className="new-category-btn button passed-color m-auto"
+            style={{
+              '--button-color': '#ffdf00',
+              '--button-text-color': 'black',
+            }}
+            onClick={() => handleReset()
+            }>
+            Reset Category
+          </button>
+          <div className="fifa-draft-order">
+          <button
+            className="new-category-btn button passed-color m-auto"
+            style={{
+              '--button-color': '#010000',
+              '--button-text-color': 'white',
+            }}
+            onClick={() => setDraftOrderEditable(!draftOrderEditable)}
+          >
+            Edit Draft Order
+          </button>
+          {draftOrderEditable && (
+            <ol className="fifa-draft-order-list">
+              <h3>Draft Order</h3>
+
+              {draftOrder.map((id, index) => {
+                const drafter = drafters.find((d) => d.id === id);
+                  return (
+                    <li
+                    key={id}
+                    className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
+                    >
+                      {drafter?.name || id}
+                      <button
+                        onClick={() => moveDraftOrderEntry(index, -1)}
+                        disabled={index === 0}
+                        className="ml-auto"
+                        >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveDraftOrderEntry(index, 1)}
+                        disabled={index === draftOrder.length - 1}
+                        >
+                        ↓
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+        </div>
+      )}
     </div>
    </div>
   );

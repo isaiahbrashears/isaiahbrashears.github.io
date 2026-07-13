@@ -50,60 +50,60 @@ const PlayerSelect = () => {
 
   return (
     <div className="jeopardy">
-    <div className="player-select-container">
-      <div className="signup-section">
-        <h2>Join the Game</h2>
-        <div className="signup-form">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
-            placeholder="Enter your name..."
-            disabled={isSubmitting}
-          />
-          <button onClick={handleSignUp} disabled={!newName.trim() || isSubmitting}>
-            {isSubmitting ? 'Joining...' : 'Join'}
+      <div className="player-select-container">
+        <div className="signup-section">
+          <h2>Join the Game</h2>
+          <div className="signup-form">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
+              placeholder="Enter your name..."
+              disabled={isSubmitting}
+            />
+            <button onClick={handleSignUp} disabled={!newName.trim() || isSubmitting}>
+              {isSubmitting ? 'Joining...' : 'Join'}
+            </button>
+          </div>
+          {error && <p className="error-message">{error}</p>}
+        </div>
+
+        <div className="divider">
+          <span>or select your name</span>
+        </div>
+
+        {loading ? (
+          <p className="text-center">Loading players...</p>
+        ) : players.length > 0 ? (
+          <div className="players-grid">
+            {players.map((player) => (
+              <button
+                key={player.id}
+                onClick={() => handlePlayerClick(player)}
+                className="player-button"
+              >
+                {player.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center">No players yet. Be the first to join!</p>
+        )}
+
+        <div className="divider">
+          <span>or</span>
+        </div>
+
+        <div className="admin-link">
+          <button
+            onClick={() => navigate('/fifa-draft/admin')}
+            className="admin-link-button"
+          >
+            Admin Portal
           </button>
         </div>
-        {error && <p className="error-message">{error}</p>}
       </div>
-
-      <div className="divider">
-        <span>or select your name</span>
-      </div>
-
-      {loading ? (
-        <p className="text-center">Loading players...</p>
-      ) : players.length > 0 ? (
-        <div className="players-grid">
-          {players.map((player) => (
-            <button
-              key={player.id}
-              onClick={() => handlePlayerClick(player)}
-              className="player-button"
-            >
-              {player.name}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="text-center">No players yet. Be the first to join!</p>
-      )}
-
-      <div className="divider">
-        <span>or</span>
-      </div>
-
-      <div className="admin-link">
-        <button
-          onClick={() => navigate('/fifa-draft/admin')}
-          className="admin-link-button"
-        >
-          Admin Portal
-        </button>
-      </div>
-    </div>
     </div>
   );
 };

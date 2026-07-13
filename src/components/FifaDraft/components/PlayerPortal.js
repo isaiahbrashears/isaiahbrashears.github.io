@@ -1,26 +1,42 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
 import {
-  submitPlayerAnswer,
+  submitDraftedPlayer,
   subscribeToPlayer,
+  subscribeToPlayers,
   subscribeToFifaCurrentRule,
+  subscribeToFifaCurrentCategory,
+  subscribeToFifaCurrentRound,
+  subscribeToFifaDraftOrder,
+  subscribeToFifaCurrentTurnIndex,
 
 } from "../../../utils/fifaFirebase";
 import { lightenColor } from "../../../utils/lightenColor";
 
 const PlayerPortal = ({ player, playerId}) => {
-  const [answer, setAnswer] = useState('');
-  const [submittedAnswer, setSubmittedAnswer] = useState('');
+  const [draftedPlayer, setDraftedPlayer] = useState('');
+  const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [currentRule, setCurrentRule] = useState({});
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [currentRound, setCurrentRound] = useState(1);
+  const [allPlayers, setAllPlayers] = useState([]);
+  const [draftOrder, setDraftOrder] = useState([]);
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
 
 
   useEffect(() => {
     if (!playerId) return;
 
     const unsubscribePlayer = subscribeToPlayer(playerId, (playerData) => {
-      setSubmittedAnswer(playerData.answer || '');
+      setLastPlayerSubmitted(playerData.lastDraft || null);
+    });
+
+    const unsubscribeCategory = subscribeToFifaCurrentCategory((category) => {
+      if (category) {
+        setCurrentCategory(category);
+      }
     });
 
     const unsubscribeRule = subscribeToFifaCurrentRule((rule) => {
@@ -29,25 +45,57 @@ const PlayerPortal = ({ player, playerId}) => {
       }
     })
 
+    const unsubscribeRound = subscribeToFifaCurrentRound((round) => {
+      if (round) {
+        setCurrentRound(round)
+      }
+    })
+
+    const unsubscribeAllPlayers = subscribeToPlayers((players) => {
+      setAllPlayers(players || []);
+    })
+
+    const unsubscribeDraftOrder = subscribeToFifaDraftOrder((order) => {
+      setDraftOrder(order || []);
+    })
+
+    const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
+      setCurrentTurnIndex(typeof index === 'number' ? index : 0);
+    })
+
     // Cleanup subscriptions on unmount
     return () => {
       if (unsubscribePlayer) unsubscribePlayer();
       if (unsubscribeRule) unsubscribeRule();
+      if (unsubscribeCategory) unsubscribeCategory();
+      if (unsubscribeRound) unsubscribeRound();
+      if (unsubscribeAllPlayers) unsubscribeAllPlayers();
+      if (unsubscribeDraftOrder) unsubscribeDraftOrder();
+      if (unsubscribeTurnIndex) unsubscribeTurnIndex();
     };
   }, [playerId]);
 
+  const currentTurnPlayerId = draftOrder[currentTurnIndex];
+  const isMyTurn = Boolean(currentTurnPlayerId) && currentTurnPlayerId === playerId;
+  const currentTurnPlayerName = allPlayers.find((p) => p.id === currentTurnPlayerId)?.name;
+
   const handleSend = async () => {
-    if (answer.trim()) {
+    if (draftedPlayer.trim() && isMyTurn) {
       setIsSubmitting(true);
       setError(null);
 
       try {
-        await submitPlayerAnswer(playerId, answer.trim());
-        setSubmittedAnswer(answer.trim());
-        setAnswer('');
+        const draftEntry = {
+          name: draftedPlayer.trim(),
+          currentCategory,
+          currentRule: currentRule.shortName,
+        };
+        await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
+        setLastPlayerSubmitted(draftEntry);
+        setDraftedPlayer('');
       } catch (err) {
-        console.error('Error submitting answer:', err);
-        setError('Failed to submit answer. Please try again.');
+        console.error('Error submitting drafted player:', err);
+        setError('Failed to submit player. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
@@ -69,16 +117,16 @@ const PlayerPortal = ({ player, playerId}) => {
         <input
           id="answer"
           type="text"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
+          value={draftedPlayer}
+          onChange={(e) => setDraftedPlayer(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type your answer here..."
+          placeholder="Type player name here..."
           disabled={isSubmitting}
           style={{
             flex: 1,
             padding: '12px',
             fontSize: '16px',
-            border: '2px solid #060CE9',
+            border:  `2px solid ${currentRule.color || 'black'}`,
             borderRadius: '8px',
             outline: 'none',
             opacity: isSubmitting ? 0.6 : 1
@@ -86,15 +134,15 @@ const PlayerPortal = ({ player, playerId}) => {
         />
         <button
           onClick={handleSend}
-          disabled={!answer.trim() || isSubmitting}
+          disabled={!draftedPlayer.trim() || isSubmitting}
           style={{
             padding: '12px 24px',
             fontSize: '16px',
-            backgroundColor: answer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
+            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            cursor: answer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
+            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
             fontWeight: 'bold',
             minWidth: '100px'
           }}
@@ -108,41 +156,52 @@ const PlayerPortal = ({ player, playerId}) => {
     </div>
   );
 
-  const submittedAnswerDisplay = (
+  const waitingDisplay = (
     <div>
-      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
-        ✓ You answered: <strong>{submittedAnswer}</strong>
+      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+        {currentTurnPlayerName ? `Waiting for ${currentTurnPlayerName}'s turn...` : 'Waiting for the draft order to be set...'}
       </p>
     </div>
   );
 
-  // Determine what to display based on Final Jeopardy state
-  let answerDisplay;
-  answerDisplay = submittedAnswer ? submittedAnswerDisplay : inputField;
+  const lastPickDisplay = lastPlayerSubmitted?.name && (
+    <div>
+      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
+        Last Player: <strong>{lastPlayerSubmitted.name}</strong> ({lastPlayerSubmitted.currentCategory}: {lastPlayerSubmitted.currentRule})
+      </p>
+    </div>
+  );
+
+  const answerDisplay = isMyTurn ? inputField : waitingDisplay;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="fifa-player-portal">
       <h2>{player}</h2>
+      <p className="text-center" style={{ fontWeight: 'bold' }}>Round {currentRound} / 15</p>
 
-      <div
-        className="fifa-draft-rule-display"
-        style={currentRule.color ? {
-          '--rule-color': currentRule.color,
-          '--rule-color-light': lightenColor(currentRule.color, 40),
-        } : undefined}
-      >
-         {currentRule?.icon} {currentRule.name} {currentRule?.icon}
-      </div>
+      {currentRule.name && (
+        <div
+          className="fifa-draft-rule-display"
+          style={currentRule.color ? {
+            '--rule-color': currentRule.color,
+            '--rule-color-light': lightenColor(currentRule.color, 40),
+          } : undefined}
+        >
+          <h3 className="my-0">{currentCategory}</h3>
+          <p className="my-0">{currentRule?.icon} {currentRule.name} {currentRule?.icon}</p>
+        </div>
+      )}
       <div style={{
-          padding: '15px',
-          borderRadius: '8px',
-          marginBottom: '30px',
-          textAlign: 'center',
-          color: 'white'
+        padding: '15px',
+        borderRadius: '8px',
+        marginBottom: '30px',
+        textAlign: 'center',
+        color: 'white'
       }}>
         <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
       </div>
       {answerDisplay}
+      {lastPickDisplay}
     </div>
   );
 };
