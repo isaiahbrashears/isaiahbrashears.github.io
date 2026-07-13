@@ -110,8 +110,6 @@ export const fetchFifaGameState = async () => {
     categoryIndex: 0,
     scoreIndex: 0,
     isFinalJeopardy: false,
-    categories: ['Category 1', 'Category 2', 'Category 3', 'Category 4', 'Category 5', 'Category 6'],
-    scores: [200, 400, 600, 800, 1000]
   };
 };
 
@@ -123,11 +121,9 @@ export const fetchCurrentCategoryAndScore = async () => {
   const gameState = await fetchFifaGameState();
 
   const categoryIndex = gameState.scoreIndex % 6;  // Which category (0-5)
-  const scoreRow = Math.floor(gameState.scoreIndex / 6);  // Which score row (0-4)
 
   return {
     category: gameState.categories[categoryIndex] || '',
-    score: gameState.scores[scoreRow] || 0,
     categoryIndex,
     scoreIndex: gameState.scoreIndex,
     isFinalJeopardy: gameState.isFinalJeopardy
@@ -147,6 +143,53 @@ export const submitPlayerAnswer = async (playerId, answer) => {
 export const setPlayerScore = async (playerId, score) => {
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
   await updateDoc(playerRef, { score });
+};
+
+/**
+ * Save the currently selected FIFA draft category (e.g. 'Nationality', 'League')
+ * @param {string} category - The category name
+ */
+export const setFifaCurrentCategory = async (category) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { currentCategory: category }, { merge: true });
+};
+
+/**
+ * Save the currently selected FIFA draft category (e.g. 'Nationality', 'League')
+ * @param {string} rule - The rule name
+ */
+export const setFifaCurrentRule = async (rule) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { currentRule: rule }, { merge: true });
+};
+
+/**
+ * Subscribe to just the current FIFA draft rule (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the current rule string (or undefined)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaCurrentRule = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data().currentRule : undefined);
+  });
+};
+
+
+/**
+ * Subscribe to just the current FIFA draft category (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the current category string (or undefined)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaCurrentCategory = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data().currentCategory : undefined);
+  });
 };
 
 /**
@@ -189,10 +232,8 @@ export const addFifaPlayer = async (name) => {
 
   await setDoc(playerRef, {
     name: trimmed,
-    score: 0,
-    answer: '',
-    wager: 0,
-    wagerSubmitted: false,
+    draftedPlayerList: [],
+    lastDraft: '',
     createdAt: serverTimestamp()
   }, { merge: true });
 
@@ -219,42 +260,6 @@ export const subscribeToPlayers = (callback) => {
     // Sort by order
     players.sort((a, b) => a.order - b.order);
     callback(players);
-  });
-};
-
-/**
- * Subscribe to game state (real-time updates)
- * @param {Function} callback - Function to call with updated game state
- * @returns {Function} Unsubscribe function
- */
-export const subscribeToGameState = (callback) => {
-  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-
-  return onSnapshot(gameStateRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const gameState = snapshot.data();
-
-      const categoryIndex = gameState.scoreIndex % 6;
-      const scoreRow = Math.floor(gameState.scoreIndex / 6);
-
-      // Use double jeopardy categories if in double jeopardy mode
-      const activeCategories = gameState.isDoubleJeopardy
-        ? (gameState.doubleCategories || gameState.categories)
-        : gameState.categories;
-
-      // Double the scores if in double jeopardy mode
-      const baseScore = gameState.scores[scoreRow] || 0;
-      const activeScore = gameState.isDoubleJeopardy ? baseScore * 2 : baseScore;
-
-      callback({
-        ...gameState,
-        category: activeCategories[categoryIndex] || '',
-        score: activeScore,
-        categoryIndex,
-        currentScoreIndex: gameState.scoreIndex,
-        isDoubleJeopardy: gameState.isDoubleJeopardy || false
-      });
-    }
   });
 };
 

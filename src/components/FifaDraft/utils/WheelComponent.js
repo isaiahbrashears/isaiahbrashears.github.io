@@ -10,8 +10,11 @@ import React, { useState, useRef, useEffect } from 'react';
 //   { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, icon: '🇩🇪' },
 // ];
 
+const SIZE = 450; // overall wheel diameter in px (was 300)
+const SCALE = SIZE / 300;
+
 const WheelComponent
- = ({ OPTIONS = [] }) => {
+ = ({ OPTIONS = [], setValue = () => {}, setCategory = () => {}  }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
@@ -31,9 +34,9 @@ const WheelComponent
   });
 
   const createSegmentPath = (startAngle, endAngle) => {
-    const radius = 150;
-    const centerX = 150;
-    const centerY = 150;
+    const radius = SIZE / 2;
+    const centerX = SIZE / 2;
+    const centerY = SIZE / 2;
 
     const startRad = (startAngle - 90) * Math.PI / 180;
     const endRad = (endAngle - 90) * Math.PI / 180;
@@ -83,6 +86,8 @@ const WheelComponent
           normalizedRotation >= seg.startAngle && normalizedRotation < seg.endAngle
         );
         setWinner(winningSegment ? winningSegment.name : OPTIONS[0].name);
+        setValue(winningSegment)
+        setCategory(winningSegment.name)
       }
     };
 
@@ -109,17 +114,17 @@ const WheelComponent
       padding: '20px'
     }}>
       {/* Pointer */}
-      <div style={{ position: 'relative', width: '300px', height: '300px' }}>
+      <div style={{ position: 'relative', width: `${SIZE}px`, height: `${SIZE}px` }}>
         <div style={{
           position: 'absolute',
-          top: '-20px',
+          top: `${-20 * SCALE}px`,
           left: '50%',
           transform: 'translateX(-50%)',
           width: '0',
           height: '0',
-          borderLeft: '15px solid transparent',
-          borderRight: '15px solid transparent',
-          borderTop: '25px solid #e74c3c',
+          borderLeft: `${15 * SCALE}px solid transparent`,
+          borderRight: `${15 * SCALE}px solid transparent`,
+          borderTop: `${25 * SCALE}px solid #e74c3c`,
           filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
           zIndex: 20,
           pointerEvents: 'none'
@@ -127,9 +132,9 @@ const WheelComponent
 
         {/* Wheel SVG */}
         <svg
-          width="300"
-          height="300"
-          viewBox="0 0 300 300"
+          width={SIZE}
+          height={SIZE}
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: 'none',
@@ -167,8 +172,8 @@ const WheelComponent
           </defs>
 
           {/* Outer border circle */}
-          <circle cx="150" cy="150" r="150" fill="#2c3e50" />
-          <circle cx="150" cy="150" r="145" fill="none" />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2} fill="#2c3e50" />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2 - 5} fill="none" />
 
           {/* Segments */}
           {segments.map((segment, index) => (
@@ -187,17 +192,17 @@ const WheelComponent
               <g>
                 {/* Shadow */}
                 <text
-                  x="150"
-                  y="150"
+                  x={SIZE / 2}
+                  y={SIZE / 2}
                   fill="rgba(0,0,0,0.5)"
-                  fontSize={segment.shortName === 'Legends' ? '11' : '14'}
+                  fontSize={(segment.shortName === 'Legends' ? 11 : 14) * SCALE}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`
-                    rotate(${segment.midAngle} 150 150)
-                    translate(0 -88)
-                    rotate(90 150 150)
+                    rotate(${segment.midAngle} ${SIZE / 2} ${SIZE / 2})
+                    translate(0 ${-88 * SCALE})
+                    rotate(90 ${SIZE / 2} ${SIZE / 2})
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -205,17 +210,17 @@ const WheelComponent
                 </text>
                 {/* Main text */}
                 <text
-                  x="150"
-                  y="150"
+                  x={SIZE / 2}
+                  y={SIZE / 2}
                   fill="white"
-                  fontSize={segment.shortName === 'Legends' ? '11' : '14'}
+                  fontSize={(segment.shortName === 'Legends' ? 11 : 14) * SCALE}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`
-                    rotate(${segment.midAngle} 150 150)
-                    translate(0 -90)
-                    rotate(90 150 150)
+                    rotate(${segment.midAngle} ${SIZE / 2} ${SIZE / 2})
+                    translate(0 ${-90 * SCALE})
+                    rotate(90 ${SIZE / 2} ${SIZE / 2})
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -226,12 +231,12 @@ const WheelComponent
           ))}
 
           {/* Center circle */}
-          <circle cx="150" cy="150" r="30" fill="#2c3e50" stroke="white" strokeWidth="4" />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={30 * SCALE} fill="#2c3e50" stroke="white" strokeWidth={4 * SCALE} />
           <text
-            x="150"
-            y="150"
+            x={SIZE / 2}
+            y={SIZE / 2}
             fill="white"
-            fontSize="12"
+            fontSize={12 * SCALE}
             fontWeight="bold"
             textAnchor="middle"
             dominantBaseline="middle"
@@ -240,24 +245,6 @@ const WheelComponent
           </text>
         </svg>
       </div>
-
-      {winner && (
-        <div style={{
-          padding: '20px 40px',
-          background: winner === 'Legends'
-            ? 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)'
-            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '12px',
-          color: 'white',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-          animation: 'fadeIn 0.5s ease-in'
-        }}>
-         {OPTIONS.find(l => l.name === winner)?.icon} {winner} {OPTIONS.find(l => l.name === winner)?.icon}
-        </div>
-      )}
 
       <button
         onClick={handleSpin}

@@ -3,15 +3,17 @@ import React, { useState, useEffect } from "react";
 import {
   submitPlayerAnswer,
   subscribeToPlayer,
-  subscribeToGameState,
+  subscribeToFifaCurrentRule,
+
 } from "../../../utils/fifaFirebase";
+import { lightenColor } from "../../../utils/lightenColor";
 
 const PlayerPortal = ({ player, playerId}) => {
   const [answer, setAnswer] = useState('');
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [currentCategory, setCurrentCategory] = useState('');
+  const [currentRule, setCurrentRule] = useState({});
 
 
   useEffect(() => {
@@ -20,14 +22,17 @@ const PlayerPortal = ({ player, playerId}) => {
     const unsubscribePlayer = subscribeToPlayer(playerId, (playerData) => {
       setSubmittedAnswer(playerData.answer || '');
     });
-    const unsubscribeGameState = subscribeToGameState((gameState) => {
-          setCurrentCategory(gameState.category);
-        });
+
+    const unsubscribeRule = subscribeToFifaCurrentRule((rule) => {
+      if (rule) {
+        setCurrentRule(rule)
+      }
+    })
 
     // Cleanup subscriptions on unmount
     return () => {
       if (unsubscribePlayer) unsubscribePlayer();
-      if (unsubscribeGameState) unsubscribeGameState();
+      if (unsubscribeRule) unsubscribeRule();
     };
   }, [playerId]);
 
@@ -54,13 +59,11 @@ const PlayerPortal = ({ player, playerId}) => {
     }
   };
 
-
-
   // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
     <div>
       <label htmlFor="answer" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-        Your Answer:
+        Your Player:
       </label>
       <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
         <input
@@ -113,9 +116,6 @@ const PlayerPortal = ({ player, playerId}) => {
     </div>
   );
 
-  console.log(player);
-
-
   // Determine what to display based on Final Jeopardy state
   let answerDisplay;
   answerDisplay = submittedAnswer ? submittedAnswerDisplay : inputField;
@@ -123,25 +123,25 @@ const PlayerPortal = ({ player, playerId}) => {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="jeopardy">
       <h2>{player}</h2>
-        <div style={{
+
+      <div
+        className="fifa-draft-rule-display"
+        style={currentRule.color ? {
+          '--rule-color': currentRule.color,
+          '--rule-color-light': lightenColor(currentRule.color, 40),
+        } : undefined}
+      >
+         {currentRule?.icon} {currentRule.name} {currentRule?.icon}
+      </div>
+      <div style={{
           padding: '15px',
-          backgroundColor: '#060CE9',
           borderRadius: '8px',
           marginBottom: '30px',
           textAlign: 'center',
           color: 'white'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{currentCategory || 'No Category Set'}</h3>
-        </div>
-        <div style={{
-          padding: '15px',
-          borderRadius: '8px',
-          marginBottom: '30px',
-          textAlign: 'center',
-          color: 'white'
-        }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
-        </div>
+      }}>
+        <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
+      </div>
       {answerDisplay}
     </div>
   );
