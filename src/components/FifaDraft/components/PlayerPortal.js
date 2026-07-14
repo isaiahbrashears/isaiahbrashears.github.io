@@ -13,19 +13,18 @@ import {
 } from "../../../utils/fifaFirebase";
 import { lightenColor } from "../../../utils/lightenColor";
 
-const PlayerPortal = ({ player, playerId}) => {
-  const [draftedPlayer, setDraftedPlayer] = useState('');
+const PlayerPortal = ({ player, playerId }) => {
+  const [draftedPlayer, setDraftedPlayer] = useState("");
   const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [currentRule, setCurrentRule] = useState({});
-  const [currentCategory, setCurrentCategory] = useState('');
+  const [currentCategory, setCurrentCategory] = useState("");
   const [currentRound, setCurrentRound] = useState(1);
   const [draftedPlayerList, setDraftedPlayerList] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
-
 
   useEffect(() => {
     if (!playerId) return;
@@ -43,27 +42,27 @@ const PlayerPortal = ({ player, playerId}) => {
 
     const unsubscribeRule = subscribeToFifaCurrentRule((rule) => {
       if (rule) {
-        setCurrentRule(rule)
+        setCurrentRule(rule);
       }
-    })
+    });
 
     const unsubscribeRound = subscribeToFifaCurrentRound((round) => {
       if (round) {
-        setCurrentRound(round)
+        setCurrentRound(round);
       }
-    })
+    });
 
     const unsubscribeAllPlayers = subscribeToPlayers((players) => {
       setAllPlayers(players || []);
-    })
+    });
 
     const unsubscribeDraftOrder = subscribeToFifaDraftOrder((order) => {
       setDraftOrder(order || []);
-    })
+    });
 
     const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
-      setCurrentTurnIndex(typeof index === 'number' ? index : 0);
-    })
+      setCurrentTurnIndex(typeof index === "number" ? index : 0);
+    });
 
     // Cleanup subscriptions on unmount
     return () => {
@@ -78,10 +77,10 @@ const PlayerPortal = ({ player, playerId}) => {
   }, [playerId]);
 
   // If no draft order has been explicitly set, default to the current player order
-  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : allPlayers.map((p) => p.id);
+  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : allPlayers.map(p => p.id);
   const currentTurnPlayerId = effectiveDraftOrder[currentTurnIndex];
   const isMyTurn = Boolean(currentTurnPlayerId) && currentTurnPlayerId === playerId;
-  const currentTurnPlayerName = allPlayers.find((p) => p.id === currentTurnPlayerId)?.name;
+  const currentTurnPlayerName = allPlayers.find(p => p.id === currentTurnPlayerId)?.name;
 
   const handleSend = async () => {
     if (draftedPlayer.trim() && isMyTurn) {
@@ -96,17 +95,19 @@ const PlayerPortal = ({ player, playerId}) => {
         };
         await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
         setLastPlayerSubmitted(draftEntry);
-        setDraftedPlayer('');
-      } catch (err) {
-        console.error('Error submitting drafted player:', err);
-        setError('Failed to submit player. Please try again.');
-      } finally {
+        setDraftedPlayer("");
+      }
+      catch (err) {
+        console.error("Error submitting drafted player:", err);
+        setError("Failed to submit player. Please try again.");
+      }
+      finally {
         setIsSubmitting(false);
       }
     }
   };
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !isSubmitting) {
+    if (e.key === "Enter" && !isSubmitting) {
       handleSend();
     }
   };
@@ -114,64 +115,73 @@ const PlayerPortal = ({ player, playerId}) => {
   // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
     <div>
-      <label htmlFor="answer" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+      <label htmlFor="answer" style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>
         Your Player:
       </label>
-      <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
+      <div style={{ display: "flex", gap: "10px" }} className="flex-wrap">
         <input
           id="answer"
           type="text"
           value={draftedPlayer}
-          onChange={(e) => setDraftedPlayer(e.target.value)}
+          onChange={e => setDraftedPlayer(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type player name here..."
           disabled={isSubmitting}
           style={{
             flex: 1,
-            padding: '12px',
-            fontSize: '16px',
-            border:  `2px solid ${currentRule.color || 'black'}`,
-            borderRadius: '8px',
-            outline: 'none',
-            opacity: isSubmitting ? 0.6 : 1
+            padding: "12px",
+            fontSize: "16px",
+            border: `2px solid ${currentRule.color || "black"}`,
+            borderRadius: "8px",
+            outline: "none",
+            opacity: isSubmitting ? 0.6 : 1,
           }}
         />
         <button
           onClick={handleSend}
           disabled={!draftedPlayer.trim() || isSubmitting}
           style={{
-            padding: '12px 24px',
-            fontSize: '16px',
-            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
-            fontWeight: 'bold',
-            minWidth: '100px'
+            padding: "12px 24px",
+            fontSize: "16px",
+            backgroundColor: draftedPlayer.trim() && !isSubmitting ? "#060CE9" : "#ccc",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: draftedPlayer.trim() && !isSubmitting ? "pointer" : "not-allowed",
+            fontWeight: "bold",
+            minWidth: "100px",
           }}
         >
-          {isSubmitting ? 'Sending...' : 'Send'}
+          {isSubmitting ? "Sending..." : "Send"}
         </button>
       </div>
       {error && (
-        <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>
+        <p style={{ color: "red", marginTop: "10px", fontSize: "14px" }}>{error}</p>
       )}
     </div>
   );
 
   const waitingDisplay = (
     <div>
-      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-        {(currentTurnPlayerName !== player) ? `Waiting for ${currentTurnPlayerName}'s turn...` : 'Waiting for Category to be set'}
+      <p style={{ fontSize: "16px", padding: "12px", backgroundColor: "#f0f0f0", borderRadius: "8px" }}>
+        {(currentTurnPlayerName !== player) ? `Waiting for ${currentTurnPlayerName}'s turn...` : "Waiting for Category to be set"}
       </p>
     </div>
   );
 
   const lastPickDisplay = lastPlayerSubmitted?.name && (
     <div>
-      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
-        Last Player: <strong>{lastPlayerSubmitted.name}</strong> ({lastPlayerSubmitted.currentCategory}: {lastPlayerSubmitted.currentRule})
+      <p style={{ fontSize: "16px", padding: "12px", backgroundColor: "#e8f5e9", borderRadius: "8px" }}>
+        Last Player:
+        {" "}
+        <strong>{lastPlayerSubmitted.name}</strong>
+        {" "}
+        (
+        {lastPlayerSubmitted.currentCategory}
+        :
+        {" "}
+        {lastPlayerSubmitted.currentRule}
+        )
       </p>
     </div>
   );
@@ -179,20 +189,33 @@ const PlayerPortal = ({ player, playerId}) => {
   const answerDisplay = (isMyTurn && currentRule.name) ? inputField : waitingDisplay;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="fifa-player-portal">
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }} className="fifa-player-portal">
       <h2>{player}</h2>
-      <p className="text-center" style={{ fontWeight: 'bold' }}>Round {currentRound} / 15</p>
+      <p className="text-center" style={{ fontWeight: "bold" }}>
+        Round
+        {currentRound}
+        {" "}
+        / 15
+      </p>
 
       {currentRule.name && (
         <div
           className="fifa-draft-rule-display"
-          style={currentRule.color ? {
-            '--rule-color': currentRule.color,
-            '--rule-color-light': lightenColor(currentRule.color, 40),
-          } : undefined}
+          style={currentRule.color
+            ? {
+                "--rule-color": currentRule.color,
+                "--rule-color-light": lightenColor(currentRule.color, 40),
+              }
+            : undefined}
         >
           <h3 className="my-0">{currentCategory}</h3>
-          <p className="my-0">{currentRule?.icon} {currentRule.name} {currentRule?.icon}</p>
+          <p className="my-0">
+            {currentRule?.icon}
+            {" "}
+            {currentRule.name}
+            {" "}
+            {currentRule?.icon}
+          </p>
         </div>
       )}
       {answerDisplay}
@@ -203,7 +226,13 @@ const PlayerPortal = ({ player, playerId}) => {
           <ol>
             {draftedPlayerList.map((pick, index) => (
               <li key={`${pick.name}-${index}`}>
-                <span className="font-bold">{pick.name}</span> ({pick.currentCategory}: {pick.currentRule})
+                <span className="font-bold">{pick.name}</span>
+                {" "}
+                (
+                {pick.currentCategory}
+                :
+                {pick.currentRule}
+                )
               </li>
             ))}
           </ol>
