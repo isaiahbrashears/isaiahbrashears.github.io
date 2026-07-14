@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   setFifaCurrentCategory,
   subscribeToFifaCurrentCategory,
@@ -12,21 +12,21 @@ import {
   subscribeToFifaCurrentTurnIndex,
   subscribeToPlayers,
   resetFifaGame,
-} from "../../../utils/fifaFirebase";
-import LeagueWheel from "./wheels/LeagueWheel";
-import NationalityWheel from "./wheels/NationalityWheel";
-import NumberWheel from "./wheels/NumberWheel";
-import RatingWheel from "./wheels/RatingWheel";
-import CategoryWheel from "./wheels/CategoryWheel";
+} from '../../../utils/fifaFirebase';
+import LeagueWheel from './wheels/LeagueWheel';
+import NationalityWheel from './wheels/NationalityWheel';
+import NumberWheel from './wheels/NumberWheel';
+import RatingWheel from './wheels/RatingWheel';
+import CategoryWheel from './wheels/CategoryWheel';
 
-import { lightenColor } from "../../../utils/lightenColor";
-import AdminDrafterTable from "./AdminDrafterTable";
+import { lightenColor } from '../../../utils/lightenColor';
+import AdminDrafterTable from './AdminDrafterTable';
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [draftOrderEditable, setDraftOrderEditable] = useState(false);
   const [adminButtonsVisible, setAdminButtonsVisible] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState("Category");
+  const [currentCategory, setCurrentCategory] = useState('Category');
   const [currentRule, setCurrentRule] = useState({});
   const [currentRound, setCurrentRound] = useState(1);
   const [drafters, setDrafters] = useState([]);
@@ -74,7 +74,7 @@ const AdminDashboard = () => {
     });
 
     const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
-      setCurrentTurnIndex(typeof index === "number" ? index : 0);
+      setCurrentTurnIndex(typeof index === 'number' ? index : 0);
     });
 
     return () => {
@@ -90,34 +90,34 @@ const AdminDashboard = () => {
   const handleCategoryChange = (category) => {
     setCurrentCategory(category);
     setFifaCurrentCategory(category).catch((err) => {
-      console.error("Error saving category:", err);
+      console.error('Error saving category:', err);
     });
   };
 
   const handleRuleChange = (rule) => {
     setCurrentRule(rule);
     setFifaCurrentRule(rule).catch((err) => {
-      console.error("Error saving rule:", err);
+      console.error('Error saving rule:', err);
     });
   };
 
   const handleResetCategory = () => {
     setCurrentRule({});
     setFifaCurrentRule({}).catch((err) => {
-      console.error("Error saving rule:", err);
+      console.error('Error saving rule:', err);
     });
-    handleCategoryChange("Category");
+    handleCategoryChange('Category');
   };
 
   const handleNextRound = () => {
     const nextRound = Math.min(currentRound + 1, 15);
     setCurrentRound(nextRound);
     setFifaCurrentRound(nextRound).catch((err) => {
-      console.error("Error saving round:", err);
+      console.error('Error saving round:', err);
     });
     setCurrentTurnIndex(0);
     setFifaCurrentTurnIndex(0).catch((err) => {
-      console.error("Error resetting turn:", err);
+      console.error('Error resetting turn:', err);
     });
   };
 
@@ -137,7 +137,7 @@ const AdminDashboard = () => {
     [newOrder[index], newOrder[swapIndex]] = [newOrder[swapIndex], newOrder[index]];
     setDraftOrder(newOrder);
     setFifaDraftOrder(newOrder).catch((err) => {
-      console.error("Error saving draft order:", err);
+      console.error('Error saving draft order:', err);
     });
   };
 
@@ -145,18 +145,18 @@ const AdminDashboard = () => {
     const nextRound = Math.min(currentRound - 1, 15);
     setCurrentRound(nextRound);
     setFifaCurrentRound(nextRound).catch((err) => {
-      console.error("Error saving round:", err);
+      console.error('Error saving round:', err);
     });
   };
 
   const handleFullReset = () => {
     const confirmed = window.confirm(
-      "This will permanently delete all players and reset the entire draft. Are you sure?",
+      'This will permanently delete all players and reset the entire draft. Are you sure?',
     );
     if (!confirmed) return;
 
     resetFifaGame().catch((err) => {
-      console.error("Error resetting game:", err);
+      console.error('Error resetting game:', err);
     });
   };
 
@@ -172,15 +172,15 @@ const AdminDashboard = () => {
           className="fifa-draft-rule-display"
           style={currentRule.color
             ? {
-                "--rule-color": currentRule.color,
-                "--rule-color-light": lightenColor(currentRule.color, 40),
+                '--rule-color': currentRule.color,
+                '--rule-color-light': lightenColor(currentRule.color, 40),
               }
             : undefined}
         >
           {currentRule?.icon}
-          {" "}
+          {' '}
           {currentRule.name}
-          {" "}
+          {' '}
           {currentRule?.icon}
         </div>
         {!isLoading
@@ -198,14 +198,14 @@ const AdminDashboard = () => {
         <h2 className="text-center">
           Round
           {currentRound}
-          {" "}
+          {' '}
           / 15
         </h2>
         <button
           className="new-category-btn button passed-color m-auto"
           style={{
-            "--button-color": "#117996",
-            "--button-text-color": "white",
+            '--button-color': '#117996',
+            '--button-text-color': 'white',
           }}
           onClick={completeRound}
         >
@@ -229,12 +229,12 @@ const AdminDashboard = () => {
           <button
             className="new-category-btn button passed-color m-auto"
             style={{
-              "--button-color": "#ffdf00",
-              "--button-text-color": "black",
+              '--button-color': '#ffdf00',
+              '--button-text-color': 'black',
             }}
             onClick={() => setAdminButtonsVisible(!adminButtonsVisible)}
           >
-            {!adminButtonsVisible ? "Admin Functions" : "Hide Admin Functions"}
+            {!adminButtonsVisible ? 'Admin Functions' : 'Hide Admin Functions'}
           </button>
         </div>
         {adminButtonsVisible && (
@@ -244,8 +244,8 @@ const AdminDashboard = () => {
                 className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound <= 1}
                 style={{
-                  "--button-color": "#6f1515",
-                  "--button-text-color": "white",
+                  '--button-color': '#6f1515',
+                  '--button-text-color': 'white',
                 }}
                 onClick={() => handlePrevRound()}
               >
@@ -256,8 +256,8 @@ const AdminDashboard = () => {
                 className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound >= 15}
                 style={{
-                  "--button-color": "#2980b9",
-                  "--button-text-color": "white",
+                  '--button-color': '#2980b9',
+                  '--button-text-color': 'white',
                 }}
                 onClick={() => handleNextRound()}
               >
@@ -267,8 +267,8 @@ const AdminDashboard = () => {
             <button
               className="new-category-btn button passed-color m-auto w-full"
               style={{
-                "--button-color": "#016600",
-                "--button-text-color": "white",
+                '--button-color': '#016600',
+                '--button-text-color': 'white',
               }}
               onClick={() => handleResetCategory()}
             >
@@ -279,8 +279,8 @@ const AdminDashboard = () => {
               <button
                 className="new-category-btn button passed-color m-auto w-full"
                 style={{
-                  "--button-color": "#010000",
-                  "--button-text-color": "white",
+                  '--button-color': '#010000',
+                  '--button-text-color': 'white',
                 }}
                 onClick={() => setDraftOrderEditable(!draftOrderEditable)}
               >
@@ -295,7 +295,7 @@ const AdminDashboard = () => {
                     return (
                       <li
                         key={id}
-                        className={index === currentTurnIndex ? "fifa-draft-order-active" : ""}
+                        className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
                       >
                         {drafter?.name || id}
                         <button
@@ -319,8 +319,8 @@ const AdminDashboard = () => {
               <button
                 className="new-category-btn button passed-color m-auto w-full mt-4"
                 style={{
-                  "--button-color": "#8b0000",
-                  "--button-text-color": "white",
+                  '--button-color': '#8b0000',
+                  '--button-text-color': 'white',
                 }}
                 onClick={() => handleFullReset()}
               >

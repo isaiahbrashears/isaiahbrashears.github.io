@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   submitDraftedPlayer,
   subscribeToPlayer,
@@ -10,16 +10,16 @@ import {
   subscribeToFifaDraftOrder,
   subscribeToFifaCurrentTurnIndex,
 
-} from "../../../utils/fifaFirebase";
-import { lightenColor } from "../../../utils/lightenColor";
+} from '../../../utils/fifaFirebase';
+import { lightenColor } from '../../../utils/lightenColor';
 
-const PlayerPortal = ({ player, playerId }) => {
-  const [draftedPlayer, setDraftedPlayer] = useState("");
+const DrafterPortal = ({ player, playerId }) => {
+  const [draftedPlayer, setDraftedPlayer] = useState('');
   const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [currentRule, setCurrentRule] = useState({});
-  const [currentCategory, setCurrentCategory] = useState("");
+  const [currentCategory, setCurrentCategory] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
   const [draftedPlayerList, setDraftedPlayerList] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
@@ -61,7 +61,7 @@ const PlayerPortal = ({ player, playerId }) => {
     });
 
     const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
-      setCurrentTurnIndex(typeof index === "number" ? index : 0);
+      setCurrentTurnIndex(typeof index === 'number' ? index : 0);
     });
 
     // Cleanup subscriptions on unmount
@@ -95,11 +95,11 @@ const PlayerPortal = ({ player, playerId }) => {
         };
         await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
         setLastPlayerSubmitted(draftEntry);
-        setDraftedPlayer("");
+        setDraftedPlayer('');
       }
       catch (err) {
-        console.error("Error submitting drafted player:", err);
-        setError("Failed to submit player. Please try again.");
+        console.error('Error submitting drafted player:', err);
+        setError('Failed to submit player. Please try again.');
       }
       finally {
         setIsSubmitting(false);
@@ -107,7 +107,7 @@ const PlayerPortal = ({ player, playerId }) => {
     }
   };
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !isSubmitting) {
+    if (e.key === 'Enter' && !isSubmitting) {
       handleSend();
     }
   };
@@ -115,10 +115,10 @@ const PlayerPortal = ({ player, playerId }) => {
   // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
     <div>
-      <label htmlFor="answer" style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>
+      <label htmlFor="answer" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
         Your Player:
       </label>
-      <div style={{ display: "flex", gap: "10px" }} className="flex-wrap">
+      <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
         <input
           id="answer"
           type="text"
@@ -129,11 +129,11 @@ const PlayerPortal = ({ player, playerId }) => {
           disabled={isSubmitting}
           style={{
             flex: 1,
-            padding: "12px",
-            fontSize: "16px",
-            border: `2px solid ${currentRule.color || "black"}`,
-            borderRadius: "8px",
-            outline: "none",
+            padding: '12px',
+            fontSize: '16px',
+            border: `2px solid ${currentRule.color || 'black'}`,
+            borderRadius: '8px',
+            outline: 'none',
             opacity: isSubmitting ? 0.6 : 1,
           }}
         />
@@ -141,45 +141,45 @@ const PlayerPortal = ({ player, playerId }) => {
           onClick={handleSend}
           disabled={!draftedPlayer.trim() || isSubmitting}
           style={{
-            padding: "12px 24px",
-            fontSize: "16px",
-            backgroundColor: draftedPlayer.trim() && !isSubmitting ? "#060CE9" : "#ccc",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: draftedPlayer.trim() && !isSubmitting ? "pointer" : "not-allowed",
-            fontWeight: "bold",
-            minWidth: "100px",
+            padding: '12px 24px',
+            fontSize: '16px',
+            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
+            fontWeight: 'bold',
+            minWidth: '100px',
           }}
         >
-          {isSubmitting ? "Sending..." : "Send"}
+          {isSubmitting ? 'Sending...' : 'Send'}
         </button>
       </div>
       {error && (
-        <p style={{ color: "red", marginTop: "10px", fontSize: "14px" }}>{error}</p>
+        <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>
       )}
     </div>
   );
 
   const waitingDisplay = (
     <div>
-      <p style={{ fontSize: "16px", padding: "12px", backgroundColor: "#f0f0f0", borderRadius: "8px" }}>
-        {(currentTurnPlayerName !== player) ? `Waiting for ${currentTurnPlayerName}'s turn...` : "Waiting for Category to be set"}
+      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+        {(currentTurnPlayerName !== player) ? `Waiting for ${currentTurnPlayerName}'s turn...` : 'Waiting for Category to be set'}
       </p>
     </div>
   );
 
   const lastPickDisplay = lastPlayerSubmitted?.name && (
     <div>
-      <p style={{ fontSize: "16px", padding: "12px", backgroundColor: "#e8f5e9", borderRadius: "8px" }}>
+      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
         Last Player:
-        {" "}
+        {' '}
         <strong>{lastPlayerSubmitted.name}</strong>
-        {" "}
+        {' '}
         (
         {lastPlayerSubmitted.currentCategory}
         :
-        {" "}
+        {' '}
         {lastPlayerSubmitted.currentRule}
         )
       </p>
@@ -189,12 +189,12 @@ const PlayerPortal = ({ player, playerId }) => {
   const answerDisplay = (isMyTurn && currentRule.name) ? inputField : waitingDisplay;
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }} className="fifa-player-portal">
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="fifa-player-portal">
       <h2>{player}</h2>
-      <p className="text-center" style={{ fontWeight: "bold" }}>
+      <p className="text-center" style={{ fontWeight: 'bold' }}>
         Round
         {currentRound}
-        {" "}
+        {' '}
         / 15
       </p>
 
@@ -203,17 +203,17 @@ const PlayerPortal = ({ player, playerId }) => {
           className="fifa-draft-rule-display"
           style={currentRule.color
             ? {
-                "--rule-color": currentRule.color,
-                "--rule-color-light": lightenColor(currentRule.color, 40),
+                '--rule-color': currentRule.color,
+                '--rule-color-light': lightenColor(currentRule.color, 40),
               }
             : undefined}
         >
           <h3 className="my-0">{currentCategory}</h3>
           <p className="my-0">
             {currentRule?.icon}
-            {" "}
+            {' '}
             {currentRule.name}
-            {" "}
+            {' '}
             {currentRule?.icon}
           </p>
         </div>
@@ -227,7 +227,7 @@ const PlayerPortal = ({ player, playerId }) => {
             {draftedPlayerList.map((pick, index) => (
               <li key={`${pick.name}-${index}`}>
                 <span className="font-bold">{pick.name}</span>
-                {" "}
+                {' '}
                 (
                 {pick.currentCategory}
                 :
@@ -242,4 +242,4 @@ const PlayerPortal = ({ player, playerId }) => {
   );
 };
 
-export default PlayerPortal;
+export default DrafterPortal;
