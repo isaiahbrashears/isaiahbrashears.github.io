@@ -4,8 +4,7 @@ import players from '../files/EAFC26-Men.json';
 
 const MAX_RESULTS = 8;
 
-const PlayerSearch = ({ onSelect, placeholder = 'Search for a player...', disabled = false }) => {
-  const [query, setQuery] = useState('');
+const PlayerSearch = ({ value, onChange, placeholder = 'Type or search for a player...', disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -21,32 +20,31 @@ const PlayerSearch = ({ onSelect, placeholder = 'Search for a player...', disabl
   }, []);
 
   const matches = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
+    const trimmed = value.trim().toLowerCase();
     if (!trimmed) return [];
 
     return players
       .filter(player => player.Name.toLowerCase().includes(trimmed))
       .slice(0, MAX_RESULTS);
-  }, [query]);
+  }, [value]);
 
   const handleChange = (e) => {
-    setQuery(e.target.value);
+    onChange(e.target.value);
     setIsOpen(true);
   };
 
   const handleSelect = (player) => {
-    setQuery(player.Name);
+    onChange(player.Name);
     setIsOpen(false);
-    onSelect(player);
   };
 
   return (
     <div className="player-search" ref={containerRef}>
       <input
         type="text"
-        value={query}
+        value={value}
         onChange={handleChange}
-        onFocus={() => query.trim() && setIsOpen(true)}
+        onFocus={() => value.trim() && setIsOpen(true)}
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"

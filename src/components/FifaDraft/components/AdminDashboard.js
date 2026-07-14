@@ -12,6 +12,8 @@ import {
   subscribeToFifaCurrentTurnIndex,
   subscribeToPlayers,
   resetFifaGame,
+  setFifaEditingContext,
+  subscribeToFifaEditingContext,
 } from '../../../utils/fifaFirebase';
 import LeagueWheel from './wheels/LeagueWheel';
 import NationalityWheel from './wheels/NationalityWheel';
@@ -32,6 +34,7 @@ const AdminDashboard = () => {
   const [drafters, setDrafters] = useState([]);
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [editingContext, setEditingContext] = useState(null);
 
   const wheels = {
     Category: CategoryWheel,
@@ -77,6 +80,10 @@ const AdminDashboard = () => {
       setCurrentTurnIndex(typeof index === 'number' ? index : 0);
     });
 
+    const unsubscribeEditingContext = subscribeToFifaEditingContext((context) => {
+      setEditingContext(context);
+    });
+
     return () => {
       if (unsubscribeCategory) unsubscribeCategory();
       if (unsubscribeRule) unsubscribeRule();
@@ -84,6 +91,7 @@ const AdminDashboard = () => {
       if (unsubscribeDrafters) unsubscribeDrafters();
       if (unsubscribeDraftOrder) unsubscribeDraftOrder();
       if (unsubscribeTurnIndex) unsubscribeTurnIndex();
+      if (unsubscribeEditingContext) unsubscribeEditingContext();
     };
   }, []);
 
@@ -98,6 +106,33 @@ const AdminDashboard = () => {
     setCurrentRule(rule);
     setFifaCurrentRule(rule).catch((err) => {
       console.error('Error saving rule:', err);
+    });
+  };
+
+  // Unlocks a specific pick so its drafter (and only that drafter) can correct its name
+  const handleStartEditPick = (drafter, pickIndex) => {
+    const pick = drafter.draftedPlayerList?.[pickIndex];
+    if (!pick) return;
+
+    handleCategoryChange(pick.currentCategory);
+    handleRuleChange({ name: pick.currentRule, shortName: pick.currentRule });
+    setFifaEditingContext({
+      drafterId: drafter.id,
+      pickIndex,
+      previousCategory: currentCategory,
+      previousRule: currentRule,
+    }).catch((err) => {
+      console.error('Error starting pick edit:', err);
+    });
+  };
+
+  const handleCancelEditPick = () => {
+    if (editingContext) {
+      handleCategoryChange(editingContext.previousCategory);
+      handleRuleChange(editingContext.previousRule);
+    }
+    setFifaEditingContext(null).catch((err) => {
+      console.error('Error cancelling pick edit:', err);
     });
   };
 
@@ -120,6 +155,19 @@ const AdminDashboard = () => {
       console.error('Error resetting turn:', err);
     });
   };
+
+  // Names drafted more than once across all drafters (e.g. free-text typos/duplicate picks)
+  const duplicatePlayerNames = (() => {
+    const counts = {};
+    drafters.forEach((drafter) => {
+      (drafter.draftedPlayerList || []).forEach((pick) => {
+        const key = pick.name?.trim().toLowerCase();
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+      });
+    });
+    return new Set(Object.keys(counts).filter(key => counts[key] > 1));
+  })();
 
   // If no draft order has been explicitly set, default to the current player order
   const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : drafters.map(drafter => drafter.id);
@@ -197,6 +245,7 @@ const AdminDashboard = () => {
         <h1 className="text-center">Admin Portal</h1>
         <h2 className="text-center">
           Round
+          {' '}
           {currentRound}
           {' '}
           / 15
@@ -220,6 +269,10 @@ const AdminDashboard = () => {
                 currentTurnIndex={currentTurnIndex}
                 editDrafter={adminButtonsVisible}
                 index={index}
+                duplicatePlayerNames={duplicatePlayerNames}
+                editingPickIndex={editingContext?.drafterId === drafter.id ? editingContext.pickIndex : null}
+                onStartEditPick={pickIndex => handleStartEditPick(drafter, pickIndex)}
+                onCancelEditPick={handleCancelEditPick}
               />
             );
           })}

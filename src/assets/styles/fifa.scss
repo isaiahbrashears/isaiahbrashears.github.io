@@ -87,6 +87,30 @@
   }
 }
 
+.fifa-draft-duplicate-pick {
+  background-color: #ffcccc;
+}
+
+.fifa-draft-edit-pick-btn {
+  margin-left: .5rem;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.fifa-draft-pick-editing {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+
+  .player-search {
+    flex: 1;
+  }
+}
+
 .fifa-draft-order-list {
   li {
     margin-bottom: .5rem;

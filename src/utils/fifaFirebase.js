@@ -6,12 +6,10 @@ import {
   getDocs,
   setDoc,
   updateDoc,
-  deleteDoc,
   onSnapshot,
   writeBatch,
-  increment,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
 } from 'firebase/firestore';
 
 // Collection references
@@ -34,7 +32,7 @@ export const initializePlayers = async (fifaPlayerNames) => {
       answer: '',
       wager: 0,
       wagerSubmitted: false,
-      order: index + 1
+      order: index + 1,
     });
   });
 
@@ -47,11 +45,11 @@ export const initializePlayers = async (fifaPlayerNames) => {
 export const initializeGameState = async () => {
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
   await setDoc(gameStateRef, {
-    categoryIndex: 0,    // 0-5 for categories A-F
-    scoreIndex: 0,       // 0-29 for the 30 questions (6 categories x 5 scores)
+    categoryIndex: 0, // 0-5 for categories A-F
+    scoreIndex: 0, // 0-29 for the 30 questions (6 categories x 5 scores)
     isFinalJeopardy: false,
     categories: ['Category 1', 'Category 2', 'Category 3', 'Category 4', 'Category 5', 'Category 6'],
-    scores: [200, 400, 600, 800, 1000]
+    scores: [200, 400, 600, 800, 1000],
   });
 };
 
@@ -67,7 +65,7 @@ export const fetchAllFifaPlayers = async () => {
   snapshot.forEach((doc) => {
     players.push({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
     });
   });
 
@@ -126,13 +124,40 @@ export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex
   batch.update(playerRef, {
     lastDraft: draftedPlayer,
     draftedPlayerList: arrayUnion(draftedPlayer),
-    submittedAt: serverTimestamp()
+    submittedAt: serverTimestamp(),
   });
 
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
   batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex }, { merge: true });
 
   await batch.commit();
+};
+
+/**
+ * Replace a single entry in a player's draftedPlayerList (e.g. to fix a typo),
+ * keeping its recorded category/rule intact unless overridden in updatedEntry.
+ * Also updates lastDraft if the edited entry is the most recent pick.
+ * @param {string} playerId - The player's document ID
+ * @param {number} pickIndex - Index into the drafter's draftedPlayerList
+ * @param {{ name: string, currentCategory: string, currentRule: string }} updatedEntry - The corrected entry
+ */
+export const updateDraftedPlayerEntry = async (playerId, pickIndex, updatedEntry) => {
+  const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
+  const snapshot = await getDoc(playerRef);
+  if (!snapshot.exists()) return;
+
+  const draftedPlayerList = snapshot.data().draftedPlayerList || [];
+  if (pickIndex < 0 || pickIndex >= draftedPlayerList.length) return;
+
+  const newList = [...draftedPlayerList];
+  newList[pickIndex] = updatedEntry;
+
+  const updates = { draftedPlayerList: newList };
+  if (pickIndex === draftedPlayerList.length - 1) {
+    updates.lastDraft = updatedEntry;
+  }
+
+  await updateDoc(playerRef, updates);
 };
 
 export const setPlayerScore = async (playerId, score) => {
@@ -171,7 +196,6 @@ export const subscribeToFifaCurrentRule = (callback) => {
     callback(snapshot.exists() ? snapshot.data().currentRule : undefined);
   });
 };
-
 
 /**
  * Subscribe to just the current FIFA draft category (real-time updates).
@@ -235,6 +259,30 @@ export const subscribeToFifaDraftOrder = (callback) => {
 };
 
 /**
+ * Save (or clear) which drafted pick is currently unlocked for editing.
+ * Set by an admin to let a specific drafter correct one of their own picks;
+ * includes the category/rule that were active before the edit so they can be restored after.
+ * @param {{ drafterId: string, pickIndex: number, previousCategory: string, previousRule: Object }|null} context
+ */
+export const setFifaEditingContext = async (context) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { editingContext: context }, { merge: true });
+};
+
+/**
+ * Subscribe to the currently unlocked pick edit, if any (real-time updates).
+ * @param {Function} callback - Called with the editing context object (or null)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaEditingContext = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data().editingContext || null) : null);
+  });
+};
+
+/**
  * Save whose turn it currently is (index into the draft order)
  * @param {number} index - Index into the draft order
  */
@@ -272,7 +320,7 @@ export const advanceToNextQuestion = async () => {
   }
 
   await updateDoc(gameStateRef, {
-    scoreIndex: nextScoreIndex
+    scoreIndex: nextScoreIndex,
   });
 };
 
@@ -299,7 +347,7 @@ export const addFifaPlayer = async (name) => {
     name: trimmed,
     draftedPlayerList: [],
     lastDraft: '',
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
   }, { merge: true });
 
   return docId;
@@ -316,7 +364,7 @@ export const deleteFifaPlayer = async (playerId) => {
   const currentTurnIndex = typeof gameState.currentTurnIndex === 'number' ? gameState.currentTurnIndex : 0;
 
   const removedIndex = draftOrder.indexOf(playerId);
-  const newDraftOrder = draftOrder.filter((id) => id !== playerId);
+  const newDraftOrder = draftOrder.filter(id => id !== playerId);
 
   let newTurnIndex = currentTurnIndex;
   if (removedIndex !== -1 && removedIndex < currentTurnIndex) {
@@ -354,7 +402,7 @@ export const resetFifaGame = async () => {
     currentRule: {},
     currentRound: 1,
     draftOrder: [],
-    currentTurnIndex: 0
+    currentTurnIndex: 0,
   });
 
   await batch.commit();
@@ -368,7 +416,7 @@ export const subscribeToPlayers = (callback) => {
     snapshot.forEach((doc) => {
       players.push({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       });
     });
 
@@ -391,7 +439,7 @@ export const subscribeToPlayer = (playerId, callback) => {
     if (snapshot.exists()) {
       callback({
         id: snapshot.id,
-        ...snapshot.data()
+        ...snapshot.data(),
       });
     }
   });

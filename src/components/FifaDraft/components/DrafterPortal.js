@@ -9,13 +9,18 @@ import {
   subscribeToFifaCurrentRound,
   subscribeToFifaDraftOrder,
   subscribeToFifaCurrentTurnIndex,
+  setFifaCurrentCategory,
+  setFifaCurrentRule,
+  updateDraftedPlayerEntry,
+  subscribeToFifaEditingContext,
+  setFifaEditingContext,
 
 } from '../../../utils/fifaFirebase';
 import { lightenColor } from '../../../utils/lightenColor';
 import PlayerSearch from './PlayerSearch';
 
 const DrafterPortal = ({ player, playerId }) => {
-  const [draftedPlayer, setDraftedPlayer] = useState(null);
+  const [draftedPlayer, setDraftedPlayer] = useState('');
   const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -26,6 +31,8 @@ const DrafterPortal = ({ player, playerId }) => {
   const [allPlayers, setAllPlayers] = useState([]);
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [editingContext, setEditingContext] = useState(null);
+  const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
     if (!playerId) return;
@@ -65,6 +72,10 @@ const DrafterPortal = ({ player, playerId }) => {
       setCurrentTurnIndex(typeof index === 'number' ? index : 0);
     });
 
+    const unsubscribeEditingContext = subscribeToFifaEditingContext((context) => {
+      setEditingContext(context);
+    });
+
     // Cleanup subscriptions on unmount
     return () => {
       if (unsubscribePlayer) unsubscribePlayer();
@@ -74,8 +85,18 @@ const DrafterPortal = ({ player, playerId }) => {
       if (unsubscribeAllPlayers) unsubscribeAllPlayers();
       if (unsubscribeDraftOrder) unsubscribeDraftOrder();
       if (unsubscribeTurnIndex) unsubscribeTurnIndex();
+      if (unsubscribeEditingContext) unsubscribeEditingContext();
     };
   }, [playerId]);
+
+  const isMyPickBeingEdited = editingContext?.drafterId === playerId;
+
+  useEffect(() => {
+    if (isMyPickBeingEdited) {
+      const pick = draftedPlayerList[editingContext.pickIndex];
+      if (pick) setEditValue(pick.name);
+    }
+  }, [isMyPickBeingEdited, editingContext, draftedPlayerList]);
 
   // If no draft order has been explicitly set, default to the current player order
   const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : allPlayers.map(p => p.id);
@@ -84,19 +105,19 @@ const DrafterPortal = ({ player, playerId }) => {
   const currentTurnPlayerName = allPlayers.find(p => p.id === currentTurnPlayerId)?.name;
 
   const handleSend = async () => {
-    if (draftedPlayer && isMyTurn) {
+    if (draftedPlayer.trim() && isMyTurn) {
       setIsSubmitting(true);
       setError(null);
 
       try {
         const draftEntry = {
-          name: draftedPlayer.Name,
+          name: draftedPlayer.trim(),
           currentCategory,
           currentRule: currentRule.shortName,
         };
         await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
         setLastPlayerSubmitted(draftEntry);
-        setDraftedPlayer(null);
+        setDraftedPlayer('');
       }
       catch (err) {
         console.error('Error submitting drafted player:', err);
@@ -107,6 +128,53 @@ const DrafterPortal = ({ player, playerId }) => {
       }
     }
   };
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !isSubmitting) {
+      handleSend();
+    }
+  };
+
+  // Restores the category/rule that were active before the admin unlocked this pick, and clears the unlock
+  const restoreGameStateAfterEdit = async () => {
+    if (editingContext) {
+      setCurrentCategory(editingContext.previousCategory);
+      setFifaCurrentCategory(editingContext.previousCategory).catch((err) => {
+        console.error('Error saving category:', err);
+      });
+
+      setCurrentRule(editingContext.previousRule);
+      setFifaCurrentRule(editingContext.previousRule).catch((err) => {
+        console.error('Error saving rule:', err);
+      });
+    }
+
+    try {
+      await setFifaEditingContext(null);
+    }
+    catch (err) {
+      console.error('Error clearing editing context:', err);
+    }
+  };
+
+  const handleCancelEditPick = () => {
+    restoreGameStateAfterEdit();
+  };
+
+  const handleSaveEditedPick = async () => {
+    if (!editValue.trim() || !isMyPickBeingEdited) return;
+    const pick = draftedPlayerList[editingContext.pickIndex];
+    if (!pick) return;
+
+    try {
+      await updateDraftedPlayerEntry(playerId, editingContext.pickIndex, { ...pick, name: editValue.trim() });
+    }
+    catch (err) {
+      console.error('Error updating drafted player:', err);
+    }
+    finally {
+      await restoreGameStateAfterEdit();
+    }
+  };
 
   // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
@@ -115,23 +183,24 @@ const DrafterPortal = ({ player, playerId }) => {
         Your Player:
       </label>
       <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1 }} onKeyPress={handleKeyPress}>
           <PlayerSearch
-            onSelect={setDraftedPlayer}
+            value={draftedPlayer}
+            onChange={setDraftedPlayer}
             disabled={isSubmitting}
           />
         </div>
         <button
           onClick={handleSend}
-          disabled={!draftedPlayer || isSubmitting}
+          disabled={!draftedPlayer.trim() || isSubmitting}
           style={{
             padding: '12px 24px',
             fontSize: '16px',
-            backgroundColor: draftedPlayer && !isSubmitting ? '#060CE9' : '#ccc',
+            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            cursor: draftedPlayer && !isSubmitting ? 'pointer' : 'not-allowed',
+            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
             fontWeight: 'bold',
             minWidth: '100px',
           }}
@@ -208,17 +277,29 @@ const DrafterPortal = ({ player, playerId }) => {
         <div>
           <h3>Your Picks</h3>
           <ol>
-            {draftedPlayerList.map((pick, index) => (
-              <li key={`${pick.name}-${index}`}>
-                <span className="font-bold">{pick.name}</span>
-                {' '}
-                (
-                {pick.currentCategory}
-                :
-                {pick.currentRule}
-                )
-              </li>
-            ))}
+            {draftedPlayerList.map((pick, index) => {
+              if (isMyPickBeingEdited && editingContext.pickIndex === index) {
+                return (
+                  <li key={`${pick.name}-${index}`} className="fifa-draft-pick-editing">
+                    <PlayerSearch value={editValue} onChange={setEditValue} />
+                    <button onClick={handleSaveEditedPick}>Save</button>
+                    <button onClick={handleCancelEditPick}>Cancel</button>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={`${pick.name}-${index}`}>
+                  <span className="font-bold">{pick.name}</span>
+                  {' '}
+                  (
+                  {pick.currentCategory}
+                  :
+                  {pick.currentRule}
+                  )
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}
