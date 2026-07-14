@@ -305,9 +305,59 @@ export const addFifaPlayer = async (name) => {
   return docId;
 };
 
+/**
+ * Delete a player and remove them from the draft order, adjusting whose
+ * turn it is if the removed drafter was before or at the active turn
+ * @param {string} playerId - The player's document ID
+ */
 export const deleteFifaPlayer = async (playerId) => {
+  const gameState = await fetchFifaGameState();
+  const draftOrder = gameState.draftOrder || [];
+  const currentTurnIndex = typeof gameState.currentTurnIndex === 'number' ? gameState.currentTurnIndex : 0;
+
+  const removedIndex = draftOrder.indexOf(playerId);
+  const newDraftOrder = draftOrder.filter((id) => id !== playerId);
+
+  let newTurnIndex = currentTurnIndex;
+  if (removedIndex !== -1 && removedIndex < currentTurnIndex) {
+    newTurnIndex -= 1;
+  }
+  newTurnIndex = Math.max(0, Math.min(newTurnIndex, newDraftOrder.length));
+
+  const batch = writeBatch(db);
+
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
-  await deleteDoc(playerRef);
+  batch.delete(playerRef);
+
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  batch.set(gameStateRef, { draftOrder: newDraftOrder, currentTurnIndex: newTurnIndex }, { merge: true });
+
+  await batch.commit();
+};
+
+/**
+ * Fully reset the FIFA draft: deletes every player and resets the game state
+ * (category, rule, round, draft order, turn index) back to defaults
+ */
+export const resetFifaGame = async () => {
+  const playersRef = collection(db, PLAYERS_COLLECTION);
+  const snapshot = await getDocs(playersRef);
+
+  const batch = writeBatch(db);
+  snapshot.forEach((playerDoc) => {
+    batch.delete(playerDoc.ref);
+  });
+
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  batch.set(gameStateRef, {
+    currentCategory: 'Category',
+    currentRule: {},
+    currentRound: 1,
+    draftOrder: [],
+    currentTurnIndex: 0
+  });
+
+  await batch.commit();
 };
 
 export const subscribeToPlayers = (callback) => {

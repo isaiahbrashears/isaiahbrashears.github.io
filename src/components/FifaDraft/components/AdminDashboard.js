@@ -12,6 +12,7 @@ import {
   setFifaCurrentTurnIndex,
   subscribeToFifaCurrentTurnIndex,
   subscribeToPlayers,
+  resetFifaGame,
 } from "../../../utils/fifaFirebase";
 import LeagueWheel from './wheels/LeagueWheel';
 import NationalityWheel from "./wheels/NationalityWheel";
@@ -101,7 +102,7 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleReset = () => {
+  const handleResetCategory = () => {
     setCurrentRule({});
     setFifaCurrentRule({}).catch((err) => {
       console.error('Error saving rule:', err);
@@ -123,16 +124,19 @@ const AdminDashboard = () => {
     });
   };
 
+  // If no draft order has been explicitly set, default to the current player order
+  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : drafters.map((drafter) => drafter.id);
+
   const orderedDrafters = [
-    ...draftOrder.map((id) => drafters.find((drafter) => drafter.id === id)).filter(Boolean),
-    ...drafters.filter((drafter) => !draftOrder.includes(drafter.id)),
+    ...effectiveDraftOrder.map((id) => drafters.find((drafter) => drafter.id === id)).filter(Boolean),
+    ...drafters.filter((drafter) => !effectiveDraftOrder.includes(drafter.id)),
   ];
 
   const moveDraftOrderEntry = (index, direction) => {
     const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= draftOrder.length) return;
+    if (swapIndex < 0 || swapIndex >= effectiveDraftOrder.length) return;
 
-    const newOrder = [...draftOrder];
+    const newOrder = [...effectiveDraftOrder];
     [newOrder[index], newOrder[swapIndex]] = [newOrder[swapIndex], newOrder[index]];
     setDraftOrder(newOrder);
     setFifaDraftOrder(newOrder).catch((err) => {
@@ -140,13 +144,33 @@ const AdminDashboard = () => {
     });
   };
 
-   const handlePrevRound = () => {
+  const handlePrevRound = () => {
     const nextRound = Math.min(currentRound - 1, 15);
     setCurrentRound(nextRound);
     setFifaCurrentRound(nextRound).catch((err) => {
       console.error('Error saving round:', err);
     });
   };
+
+  const toggleAdminButtons = () => {
+    setAdminButtonsVisible(!adminButtonsVisible);
+  }
+
+  const handleFullReset = () => {
+    const confirmed = window.confirm(
+      'This will permanently delete all players and reset the entire draft. Are you sure?'
+    );
+    if (!confirmed) return;
+
+    resetFifaGame().catch((err) => {
+      console.error('Error resetting game:', err);
+    });
+  };
+
+  const completeRound = () => {
+    handleNextRound();
+    handleResetCategory();
+  }
   return (
    <div className="fifa-draft-admin-Dashboard">
     <div className="fifa-draft-wheels">
@@ -172,6 +196,15 @@ const AdminDashboard = () => {
     <div className="fifa-draft-player-tracking">
       <h1 className="text-center">Admin Portal</h1>
       <h2 className="text-center">Round {currentRound} / 15</h2>
+      <button
+        className="new-category-btn button passed-color m-auto"
+        style={{
+          '--button-color': '#117996',
+          '--button-text-color': 'white',
+        }} onClick={completeRound}
+      >
+        Complete Round
+      </button>
       <div className="fifa-drafters-container">
         {orderedDrafters.map((drafter, index) => {
           return (
@@ -179,31 +212,30 @@ const AdminDashboard = () => {
               key={drafter.id}
               drafter={drafter}
               currentTurnIndex={currentTurnIndex}
+              editDrafter={adminButtonsVisible}
               index={index}
             />
           )
         })}
       </div>
 
-      <div>
+      <div className="my-8">
         <button
           className="new-category-btn button passed-color m-auto"
-          disabled={currentRound <= 1}
           style={{
             '--button-color': '#ffdf00',
             '--button-text-color': 'black',
           }}
           onClick={() => setAdminButtonsVisible(!adminButtonsVisible)
         }>
-          Admin Functions
+          {!adminButtonsVisible ? 'Admin Functions' : 'Hide Admin Functions'}
         </button>
       </div>
       {adminButtonsVisible && (
-
         <div className="fifa-admin-buttons">
           <div className="flex mb-4">
             <button
-                className="new-category-btn button passed-color m-auto"
+                className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound <= 1}
                 style={{
                   '--button-color': '#6f1515',
@@ -213,8 +245,9 @@ const AdminDashboard = () => {
                 }>
               Prev Round
             </button>
+            <span className="px-2"></span>
             <button
-                className="new-category-btn button passed-color m-auto"
+                className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound >= 15}
                 style={{
                   '--button-color': '#2980b9',
@@ -226,49 +259,50 @@ const AdminDashboard = () => {
             </button>
           </div>
           <button
-            className="new-category-btn button passed-color m-auto"
+            className="new-category-btn button passed-color m-auto w-full"
             style={{
-              '--button-color': '#ffdf00',
-              '--button-text-color': 'black',
+              '--button-color': '#016600',
+              '--button-text-color': 'white',
             }}
-            onClick={() => handleReset()
+            onClick={() => handleResetCategory()
             }>
             Reset Category
           </button>
-          <div className="fifa-draft-order">
-          <button
-            className="new-category-btn button passed-color m-auto"
-            style={{
-              '--button-color': '#010000',
-              '--button-text-color': 'white',
-            }}
-            onClick={() => setDraftOrderEditable(!draftOrderEditable)}
-          >
-            Edit Draft Order
-          </button>
-          {draftOrderEditable && (
-            <ol className="fifa-draft-order-list">
-              <h3>Draft Order</h3>
 
-              {draftOrder.map((id, index) => {
-                const drafter = drafters.find((d) => d.id === id);
+          <div className="fifa-draft-order mt-4">
+            <button
+              className="new-category-btn button passed-color m-auto w-full"
+              style={{
+                '--button-color': '#010000',
+                '--button-text-color': 'white',
+              }}
+              onClick={() => setDraftOrderEditable(!draftOrderEditable)}
+            >
+              Edit Draft Order
+            </button>
+            {draftOrderEditable && (
+              <ol className="fifa-draft-order-list">
+                <h3>Draft Order</h3>
+
+                {effectiveDraftOrder.map((id, index) => {
+                  const drafter = drafters.find((d) => d.id === id);
                   return (
                     <li
-                    key={id}
-                    className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
+                      key={id}
+                      className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
                     >
                       {drafter?.name || id}
                       <button
                         onClick={() => moveDraftOrderEntry(index, -1)}
                         disabled={index === 0}
                         className="ml-auto"
-                        >
+                      >
                         ↑
                       </button>
                       <button
                         onClick={() => moveDraftOrderEntry(index, 1)}
-                        disabled={index === draftOrder.length - 1}
-                        >
+                        disabled={index === effectiveDraftOrder.length - 1}
+                      >
                         ↓
                       </button>
                     </li>
@@ -276,8 +310,18 @@ const AdminDashboard = () => {
                 })}
               </ol>
             )}
+            <button
+              className="new-category-btn button passed-color m-auto w-full mt-4"
+              style={{
+                '--button-color': '#8b0000',
+                '--button-text-color': 'white',
+              }}
+              onClick={() => handleFullReset()
+              }>
+              Full Reset (Delete All Players)
+            </button>
           </div>
-           </div>
+        </div>
       )}
     </div>
    </div>

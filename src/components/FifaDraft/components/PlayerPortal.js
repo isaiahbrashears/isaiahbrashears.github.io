@@ -21,6 +21,7 @@ const PlayerPortal = ({ player, playerId}) => {
   const [currentRule, setCurrentRule] = useState({});
   const [currentCategory, setCurrentCategory] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
+  const [draftedPlayerList, setDraftedPlayerList] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
@@ -31,6 +32,7 @@ const PlayerPortal = ({ player, playerId}) => {
 
     const unsubscribePlayer = subscribeToPlayer(playerId, (playerData) => {
       setLastPlayerSubmitted(playerData.lastDraft || null);
+      setDraftedPlayerList(playerData.draftedPlayerList || []);
     });
 
     const unsubscribeCategory = subscribeToFifaCurrentCategory((category) => {
@@ -75,7 +77,9 @@ const PlayerPortal = ({ player, playerId}) => {
     };
   }, [playerId]);
 
-  const currentTurnPlayerId = draftOrder[currentTurnIndex];
+  // If no draft order has been explicitly set, default to the current player order
+  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : allPlayers.map((p) => p.id);
+  const currentTurnPlayerId = effectiveDraftOrder[currentTurnIndex];
   const isMyTurn = Boolean(currentTurnPlayerId) && currentTurnPlayerId === playerId;
   const currentTurnPlayerName = allPlayers.find((p) => p.id === currentTurnPlayerId)?.name;
 
@@ -159,7 +163,7 @@ const PlayerPortal = ({ player, playerId}) => {
   const waitingDisplay = (
     <div>
       <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-        {currentTurnPlayerName ? `Waiting for ${currentTurnPlayerName}'s turn...` : 'Waiting for the draft order to be set...'}
+        {(currentTurnPlayerName !== player) ? `Waiting for ${currentTurnPlayerName}'s turn...` : 'Waiting for Category to be set'}
       </p>
     </div>
   );
@@ -172,7 +176,7 @@ const PlayerPortal = ({ player, playerId}) => {
     </div>
   );
 
-  const answerDisplay = isMyTurn ? inputField : waitingDisplay;
+  const answerDisplay = (isMyTurn && currentRule.name) ? inputField : waitingDisplay;
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }} className="fifa-player-portal">
@@ -191,17 +195,20 @@ const PlayerPortal = ({ player, playerId}) => {
           <p className="my-0">{currentRule?.icon} {currentRule.name} {currentRule?.icon}</p>
         </div>
       )}
-      <div style={{
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px' }}>DOUBLE JEOPARDY</p>
-      </div>
       {answerDisplay}
       {lastPickDisplay}
+      {draftedPlayerList.length > 0 && (
+        <div>
+          <h3>Your Picks</h3>
+          <ol>
+            {draftedPlayerList.map((pick, index) => (
+              <li key={`${pick.name}-${index}`}>
+                <span className="font-bold">{pick.name}</span> ({pick.currentCategory}: {pick.currentRule})
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 };
