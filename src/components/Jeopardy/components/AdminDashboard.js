@@ -88,19 +88,6 @@ const AdminDashboard = () => {
   const handleSubmitAnswers = async () => {
     setIsResetting(true);
     try {
-      const correctInOrder = players
-        .filter(p => selectedAnswers[p.id] === 'correct' && p.submittedAt)
-        .sort((a, b) => {
-          const aTime = a.submittedAt.toMillis ? a.submittedAt.toMillis() : a.submittedAt;
-          const bTime = b.submittedAt.toMillis ? b.submittedAt.toMillis() : b.submittedAt;
-          return aTime - bTime;
-        });
-      // if (correctInOrder.length > 0) {
-      //   correctInOrder.forEach((p, i) => console.log(`  ${i + 1}. ${p.name}`))
-      //   await updatePlayerScore(correctInOrder[0].id, 100);
-      //   await updatePlayerScore(correctInOrder[1].id, 50);
-      // }
-
       let updatePromises;
       if (isFinalJeopardy) {
         updatePromises = players.map((player) => {

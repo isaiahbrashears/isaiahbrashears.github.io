@@ -1,31 +1,29 @@
+/* eslint-disable react/prop-types */
 import React, { useState, useRef, useEffect } from 'react';
 
-const LEAGUES = [
-  { name: 'Premier League', color: '#38003c', shortName: 'EPL', weight: 7, flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'Legends', color: '#D3AF37', shortName: 'Legends', weight: 1, flag: '🏆✨' },
-  { name: 'Ligue 1', color: '#0055A4', shortName: 'Ligue 1', weight: 7, flag: '🇫🇷' },
-  { name: 'La Liga', color: '#ee8707', shortName: 'La Liga', weight: 7, flag: '🇪🇸' },
-  { name: 'MLS', color: '#B22234', shortName: 'MLS', weight: 1, flag: '🇺🇸' },
-  { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, flag: '🇩🇪' },
-  { name: 'Rest of the World', color: '#000', shortName: 'Rest of World', weight: 1, flag: '🌍' },
-  { name: 'Serie A', color: '#024494', shortName: 'Serie A', weight: 7, flag: '🇮🇹' }
-];
+// Passed OPTIONS should be in this format
+// Weight is used to decide how likely that field will be landed on.
+// Short Name is the label used on wheel
 
-const WheelComponent = () => {
+// const LEAGUES = [
+//   { name: 'Premier League', color: '#38003c', shortName: 'EPL', weight: 7, icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+//   { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, icon: '🇩🇪' },
+// ];
+
+const SIZE = 450; // overall wheel diameter in px (was 300)
+const SCALE = SIZE / 300;
+
+const WheelComponent
+ = ({ OPTIONS = [], setValue = () => {}, setCategory = () => {}  }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [winner, setWinner] = useState(null);
   const animationRef = useRef(null);
 
-  // Check for jarrett query param
-  const isJarrettMode = typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('jarrett') === 'true';
-
   // Calculate total weight and segment angles
-  const totalWeight = LEAGUES.reduce((sum, league) => sum + league.weight, 0);
-  const segments = LEAGUES.map((league, index) => {
-    const startAngle = LEAGUES.slice(0, index).reduce((sum, l) => sum + l.weight, 0) * 360 / totalWeight;
-    const endAngle = LEAGUES.slice(0, index + 1).reduce((sum, l) => sum + l.weight, 0) * 360 / totalWeight;
+  const totalWeight = OPTIONS.reduce((sum, option) => sum + option.weight, 0);
+  const segments = OPTIONS.map((league, index) => {
+    const startAngle = OPTIONS.slice(0, index).reduce((sum, opt) => sum + opt.weight, 0) * 360 / totalWeight;
+    const endAngle = OPTIONS.slice(0, index + 1).reduce((sum, opt) => sum + opt.weight, 0) * 360 / totalWeight;
     return {
       ...league,
       startAngle,
@@ -35,9 +33,9 @@ const WheelComponent = () => {
   });
 
   const createSegmentPath = (startAngle, endAngle) => {
-    const radius = 150;
-    const centerX = 150;
-    const centerY = 150;
+    const radius = SIZE / 2;
+    const centerX = SIZE / 2;
+    const centerY = SIZE / 2;
 
     const startRad = (startAngle - 90) * Math.PI / 180;
     const endRad = (endAngle - 90) * Math.PI / 180;
@@ -56,7 +54,6 @@ const WheelComponent = () => {
     if (isSpinning) return;
 
     setIsSpinning(true);
-    setWinner(null);
 
     // Random number of spins + random angle
     const spins = 5 + Math.random() * 3;
@@ -86,7 +83,8 @@ const WheelComponent = () => {
         const winningSegment = segments.find(seg =>
           normalizedRotation >= seg.startAngle && normalizedRotation < seg.endAngle
         );
-        setWinner(winningSegment ? winningSegment.name : LEAGUES[0].name);
+        setValue(winningSegment)
+        setCategory(winningSegment.name)
       }
     };
 
@@ -113,17 +111,17 @@ const WheelComponent = () => {
       padding: '20px'
     }}>
       {/* Pointer */}
-      <div style={{ position: 'relative', width: '300px', height: '300px' }}>
+      <div style={{ position: 'relative', width: `${SIZE}px`, height: `${SIZE}px` }}>
         <div style={{
           position: 'absolute',
-          top: '-20px',
+          top: `${-20 * SCALE}px`,
           left: '50%',
           transform: 'translateX(-50%)',
           width: '0',
           height: '0',
-          borderLeft: '15px solid transparent',
-          borderRight: '15px solid transparent',
-          borderTop: '25px solid #e74c3c',
+          borderLeft: `${15 * SCALE}px solid transparent`,
+          borderRight: `${15 * SCALE}px solid transparent`,
+          borderTop: `${25 * SCALE}px solid #e74c3c`,
           filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
           zIndex: 20,
           pointerEvents: 'none'
@@ -131,9 +129,9 @@ const WheelComponent = () => {
 
         {/* Wheel SVG */}
         <svg
-          width="300"
-          height="300"
-          viewBox="0 0 300 300"
+          width={SIZE}
+          height={SIZE}
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: 'none',
@@ -171,8 +169,8 @@ const WheelComponent = () => {
           </defs>
 
           {/* Outer border circle */}
-          <circle cx="150" cy="150" r="150" fill="#2c3e50" />
-          <circle cx="150" cy="150" r="145" fill="none" />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2} fill="#2c3e50" />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2 - 5} fill="none" />
 
           {/* Segments */}
           {segments.map((segment, index) => (
@@ -191,17 +189,17 @@ const WheelComponent = () => {
               <g>
                 {/* Shadow */}
                 <text
-                  x="150"
-                  y="150"
+                  x={SIZE / 2}
+                  y={SIZE / 2}
                   fill="rgba(0,0,0,0.5)"
-                  fontSize={segment.shortName === 'Legends' ? '11' : '14'}
+                  fontSize={(segment.shortName === 'Legends' ? 11 : 14) * SCALE}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`
-                    rotate(${segment.midAngle} 150 150)
-                    translate(0 -88)
-                    rotate(90 150 150)
+                    rotate(${segment.midAngle} ${SIZE / 2} ${SIZE / 2})
+                    translate(0 ${-88 * SCALE})
+                    rotate(90 ${SIZE / 2} ${SIZE / 2})
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -209,17 +207,17 @@ const WheelComponent = () => {
                 </text>
                 {/* Main text */}
                 <text
-                  x="150"
-                  y="150"
+                  x={SIZE / 2}
+                  y={SIZE / 2}
                   fill="white"
-                  fontSize={segment.shortName === 'Legends' ? '11' : '14'}
+                  fontSize={(segment.shortName === 'Legends' ? 11 : 14) * SCALE}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`
-                    rotate(${segment.midAngle} 150 150)
-                    translate(0 -90)
-                    rotate(90 150 150)
+                    rotate(${segment.midAngle} ${SIZE / 2} ${SIZE / 2})
+                    translate(0 ${-90 * SCALE})
+                    rotate(90 ${SIZE / 2} ${SIZE / 2})
                   `}
                   style={{ pointerEvents: 'none' }}
                 >
@@ -230,79 +228,31 @@ const WheelComponent = () => {
           ))}
 
           {/* Center circle */}
-          <circle cx="150" cy="150" r="30" fill="#2c3e50" stroke="white" strokeWidth="4" />
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={30 * SCALE}
+            fill="#2c3e50"
+            stroke="white"
+            strokeWidth={4 * SCALE}
+            onClick={handleSpin}
+            className="wheel-center"
+          />
           <text
-            x="150"
-            y="150"
+            onClick={handleSpin}
+            x={SIZE / 2}
+            y={SIZE / 2}
             fill="white"
-            fontSize="12"
+            fontSize={12 * SCALE}
             fontWeight="bold"
             textAnchor="middle"
             dominantBaseline="middle"
+            className="wheel-center-text"
           >
-            SPIN
+            Spin
           </text>
         </svg>
       </div>
-
-      {winner && (
-        <div style={{
-          padding: '20px 40px',
-          background: winner === 'Legends'
-            ? 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)'
-            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '12px',
-          color: 'white',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-          animation: 'fadeIn 0.5s ease-in'
-        }}>
-          {isJarrettMode
-            ? '😐 Jarrett take a shot 😐'
-            : winner === 'Legends'
-              ? '🏆✨ LEGENDS! ✨🏆'
-              : `${LEAGUES.find(l => l.name === winner)?.flag || '🎉'} ${winner}! ${LEAGUES.find(l => l.name === winner)?.flag || '🎉'}`
-          }
-        </div>
-      )}
-
-      <button
-        onClick={handleSpin}
-        disabled={isSpinning}
-        style={{
-          padding: '18px 50px',
-          fontSize: '20px',
-          fontWeight: 'bold',
-          color: 'white',
-          background: isSpinning
-            ? 'linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)'
-            : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-          border: 'none',
-          borderRadius: '50px',
-          cursor: isSpinning ? 'not-allowed' : 'pointer',
-          boxShadow: '0 6px 12px rgba(0,0,0,0.3)',
-          transition: 'all 0.3s ease',
-          transform: isSpinning ? 'scale(0.95)' : 'scale(1)',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
-        }}
-        onMouseEnter={(e) => {
-          if (!isSpinning) {
-            e.target.style.transform = 'scale(1.05)';
-            e.target.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSpinning) {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
-          }
-        }}
-      >
-        {isSpinning ? '🎲 SPINNING...' : '🎯 SPIN THE WHEEL'}
-      </button>
 
       <style>{`
         @keyframes fadeIn {
@@ -320,4 +270,9 @@ const WheelComponent = () => {
   );
 };
 
-export default WheelComponent;
+export default WheelComponent
+;
+
+WheelComponent.defaultProps = {
+  OPTIONS: [],
+};
