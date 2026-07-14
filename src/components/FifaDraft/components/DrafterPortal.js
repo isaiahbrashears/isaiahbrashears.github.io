@@ -12,9 +12,10 @@ import {
 
 } from '../../../utils/fifaFirebase';
 import { lightenColor } from '../../../utils/lightenColor';
+import PlayerSearch from './PlayerSearch';
 
 const DrafterPortal = ({ player, playerId }) => {
-  const [draftedPlayer, setDraftedPlayer] = useState('');
+  const [draftedPlayer, setDraftedPlayer] = useState(null);
   const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -83,19 +84,19 @@ const DrafterPortal = ({ player, playerId }) => {
   const currentTurnPlayerName = allPlayers.find(p => p.id === currentTurnPlayerId)?.name;
 
   const handleSend = async () => {
-    if (draftedPlayer.trim() && isMyTurn) {
+    if (draftedPlayer && isMyTurn) {
       setIsSubmitting(true);
       setError(null);
 
       try {
         const draftEntry = {
-          name: draftedPlayer.trim(),
+          name: draftedPlayer.Name,
           currentCategory,
           currentRule: currentRule.shortName,
         };
         await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
         setLastPlayerSubmitted(draftEntry);
-        setDraftedPlayer('');
+        setDraftedPlayer(null);
       }
       catch (err) {
         console.error('Error submitting drafted player:', err);
@@ -106,11 +107,6 @@ const DrafterPortal = ({ player, playerId }) => {
       }
     }
   };
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !isSubmitting) {
-      handleSend();
-    }
-  };
 
   // Answer input (shown after wager in Final Jeopardy, or immediately in regular rounds)
   const inputField = (
@@ -119,35 +115,23 @@ const DrafterPortal = ({ player, playerId }) => {
         Your Player:
       </label>
       <div style={{ display: 'flex', gap: '10px' }} className="flex-wrap">
-        <input
-          id="answer"
-          type="text"
-          value={draftedPlayer}
-          onChange={e => setDraftedPlayer(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type player name here..."
-          disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: '12px',
-            fontSize: '16px',
-            border: `2px solid ${currentRule.color || 'black'}`,
-            borderRadius: '8px',
-            outline: 'none',
-            opacity: isSubmitting ? 0.6 : 1,
-          }}
-        />
+        <div style={{ flex: 1 }}>
+          <PlayerSearch
+            onSelect={setDraftedPlayer}
+            disabled={isSubmitting}
+          />
+        </div>
         <button
           onClick={handleSend}
-          disabled={!draftedPlayer.trim() || isSubmitting}
+          disabled={!draftedPlayer || isSubmitting}
           style={{
             padding: '12px 24px',
             fontSize: '16px',
-            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
+            backgroundColor: draftedPlayer && !isSubmitting ? '#060CE9' : '#ccc',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
+            cursor: draftedPlayer && !isSubmitting ? 'pointer' : 'not-allowed',
             fontWeight: 'bold',
             minWidth: '100px',
           }}

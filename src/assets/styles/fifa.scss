@@ -96,3 +96,56 @@
 
   }
 }
+
+.player-search {
+  position: relative;
+  width: 100%;
+
+  &-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid black;
+    border-radius: 8px;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  &-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    max-height: 16rem;
+    overflow-y: auto;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &-result {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: #f0f0f0;
+    }
+
+    &-name {
+      font-weight: bold;
+      color: black;
+    }
+
+    &-meta {
+      font-size: 12px;
+      color: #555;
+    }
+  }
+}
