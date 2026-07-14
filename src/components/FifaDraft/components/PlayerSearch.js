@@ -68,6 +68,9 @@ const PlayerSearch = ({ value, onChange, placeholder = 'Type or search for a pla
                 {' '}
                 ·
                 {' '}
+                {player.League}
+                ·
+                {' '}
                 {player.Team}
               </span>
             </li>

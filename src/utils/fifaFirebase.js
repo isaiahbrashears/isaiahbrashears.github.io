@@ -116,8 +116,9 @@ export const fetchFifaGameState = async () => {
  * @param {string} playerId - The player's document ID
  * @param {{ name: string, currentCategory: string, currentRule: string }} draftedPlayer - The drafted player entry
  * @param {number} nextTurnIndex - Index into the draft order that should become active next
+ * @param {Array<string>} nextSkippedDrafterIds - Updated skip queue (see turnOrder.js)
  */
-export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex) => {
+export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex, nextSkippedDrafterIds) => {
   const batch = writeBatch(db);
 
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
@@ -128,9 +129,49 @@ export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex
   });
 
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex }, { merge: true });
+  batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex, skippedDrafterIds: nextSkippedDrafterIds }, { merge: true });
 
   await batch.commit();
+};
+
+/**
+ * Skip the current drafter's turn without recording a pick, advancing the turn
+ * per the queue rules in turnOrder.js (the skipped drafter gets revisited later in the round).
+ * Also clears the current rule, since skipping forfeits that spin - whoever's up
+ * next (including the skipped drafter, once revisited) needs a freshly spun rule.
+ * @param {number} nextTurnIndex - Index into the draft order that should become active next
+ * @param {Array<string>} nextSkippedDrafterIds - Updated skip queue (see turnOrder.js)
+ */
+export const skipDraftTurn = async (nextTurnIndex, nextSkippedDrafterIds) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, {
+    currentTurnIndex: nextTurnIndex,
+    skippedDrafterIds: nextSkippedDrafterIds,
+    currentRule: {},
+  }, { merge: true });
+};
+
+/**
+ * Save (or clear) the skip queue directly, e.g. when starting a new round
+ * @param {Array<string>} ids - Player IDs waiting to be revisited, in order
+ */
+export const setFifaSkippedDrafterIds = async (ids) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { skippedDrafterIds: ids }, { merge: true });
+};
+
+/**
+ * Subscribe to the current skip queue (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the skip queue array (player IDs, or [])
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaSkippedDrafters = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data().skippedDrafterIds || []) : []);
+  });
 };
 
 /**
@@ -236,12 +277,12 @@ export const subscribeToFifaCurrentRound = (callback) => {
 
 /**
  * Save the draft order (array of player document IDs) and reset the turn
- * back to the first drafter in that order
+ * back to the first drafter in that order, clearing any pending skips
  * @param {Array<string>} playerIds - Ordered array of player document IDs
  */
 export const setFifaDraftOrder = async (playerIds) => {
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  await setDoc(gameStateRef, { draftOrder: playerIds, currentTurnIndex: 0 }, { merge: true });
+  await setDoc(gameStateRef, { draftOrder: playerIds, currentTurnIndex: 0, skippedDrafterIds: [] }, { merge: true });
 };
 
 /**
@@ -362,9 +403,11 @@ export const deleteFifaPlayer = async (playerId) => {
   const gameState = await fetchFifaGameState();
   const draftOrder = gameState.draftOrder || [];
   const currentTurnIndex = typeof gameState.currentTurnIndex === 'number' ? gameState.currentTurnIndex : 0;
+  const skippedDrafterIds = gameState.skippedDrafterIds || [];
 
   const removedIndex = draftOrder.indexOf(playerId);
   const newDraftOrder = draftOrder.filter(id => id !== playerId);
+  const newSkippedDrafterIds = skippedDrafterIds.filter(id => id !== playerId);
 
   let newTurnIndex = currentTurnIndex;
   if (removedIndex !== -1 && removedIndex < currentTurnIndex) {
@@ -378,7 +421,11 @@ export const deleteFifaPlayer = async (playerId) => {
   batch.delete(playerRef);
 
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  batch.set(gameStateRef, { draftOrder: newDraftOrder, currentTurnIndex: newTurnIndex }, { merge: true });
+  batch.set(gameStateRef, {
+    draftOrder: newDraftOrder,
+    currentTurnIndex: newTurnIndex,
+    skippedDrafterIds: newSkippedDrafterIds,
+  }, { merge: true });
 
   await batch.commit();
 };
@@ -403,6 +450,7 @@ export const resetFifaGame = async () => {
     currentRound: 1,
     draftOrder: [],
     currentTurnIndex: 0,
+    skippedDrafterIds: [],
   });
 
   await batch.commit();

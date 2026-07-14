@@ -9,13 +9,11 @@ const FifaDraft = () => {
   const { playerName } = useParams();
   const location = useLocation();
   const [playerId, setPlayerId] = useState(location.state?.playerId || null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (playerName && playerName !== 'admin') {
       const findPlayer = async () => {
         try {
-          setLoading(true);
           const decodedPlayerName = decodeURIComponent(playerName);
 
           // If we already have playerId from navigation state, use it
@@ -33,15 +31,9 @@ const FifaDraft = () => {
         catch (err) {
           console.error('Error finding player:', err);
         }
-        finally {
-          setLoading(false);
-        }
       };
 
       findPlayer();
-    }
-    else {
-      setLoading(false);
     }
   }, [playerName, location.state?.playerId]);
 

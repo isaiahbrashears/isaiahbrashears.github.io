@@ -1,11 +1,11 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import { deleteFifaPlayer } from '../../../utils/fifaFirebase';
+import { catShortenedTerm } from '../utils/catShortenedTerm';
 
 const AdminDrafterTable = ({
   drafter = {},
-  index,
-  currentTurnIndex,
+  isActiveTurn = false,
   editDrafter,
   duplicatePlayerNames = new Set(),
   editingPickIndex = null,
@@ -27,7 +27,7 @@ const AdminDrafterTable = ({
 
   return (
     <div className="admins-drafter-table">
-      <h4 className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}>{drafter.name}</h4>
+      <h4 className={isActiveTurn ? 'fifa-draft-order-active' : ''}>{drafter.name}</h4>
       {editDrafter && (
         <button onClick={handlePlayerDelete}>
           Remove
@@ -39,21 +39,17 @@ const AdminDrafterTable = ({
         {drafter?.draftedPlayerList.map((player, pickIndex) => {
           const isDuplicate = duplicatePlayerNames.has(player.name?.trim().toLowerCase());
           const isEditing = editingPickIndex === pickIndex;
+          const showEditButton = editDrafter && !isEditing;
 
           return (
             <li
               key={`${player.name}-${pickIndex}`}
-              className={isDuplicate ? 'fifa-draft-duplicate-pick' : ''}
+              className={[
+                isDuplicate ? 'fifa-draft-duplicate-pick' : '',
+                showEditButton ? 'fifa-draft-pick-has-edit-btn' : '',
+              ].filter(Boolean).join(' ')}
             >
-              <span className="font-bold">{player.name}</span>
-              {' '}
-              (
-              {player.currentCategory}
-              :
-              {' '}
-              {player.currentRule}
-              )
-              {editDrafter && !isEditing && (
+              {showEditButton && (
                 <button
                   className="fifa-draft-edit-pick-btn"
                   onClick={() => onStartEditPick(pickIndex)}
@@ -63,6 +59,12 @@ const AdminDrafterTable = ({
                   ✏️
                 </button>
               )}
+              <span className="font-bold">{player.name}</span>
+              (
+              {catShortenedTerm[player.currentCategory]}
+              {player.currentRule}
+              )
+
               {isEditing && (
                 <span className="fifa-draft-pick-editing-status">
                   {' '}

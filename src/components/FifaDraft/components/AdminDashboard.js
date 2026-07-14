@@ -14,7 +14,11 @@ import {
   resetFifaGame,
   setFifaEditingContext,
   subscribeToFifaEditingContext,
+  skipDraftTurn,
+  setFifaSkippedDrafterIds,
+  subscribeToFifaSkippedDrafters,
 } from '../../../utils/fifaFirebase';
+import { getCurrentTurnPlayerId, getNextTurnStateAfterSkip } from '../utils/turnOrder';
 import LeagueWheel from './wheels/LeagueWheel';
 import NationalityWheel from './wheels/NationalityWheel';
 import NumberWheel from './wheels/NumberWheel';
@@ -35,6 +39,7 @@ const AdminDashboard = () => {
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [editingContext, setEditingContext] = useState(null);
+  const [skippedDrafterIds, setSkippedDrafterIds] = useState([]);
 
   const wheels = {
     Category: CategoryWheel,
@@ -84,6 +89,10 @@ const AdminDashboard = () => {
       setEditingContext(context);
     });
 
+    const unsubscribeSkippedDrafters = subscribeToFifaSkippedDrafters((ids) => {
+      setSkippedDrafterIds(ids || []);
+    });
+
     return () => {
       if (unsubscribeCategory) unsubscribeCategory();
       if (unsubscribeRule) unsubscribeRule();
@@ -92,6 +101,7 @@ const AdminDashboard = () => {
       if (unsubscribeDraftOrder) unsubscribeDraftOrder();
       if (unsubscribeTurnIndex) unsubscribeTurnIndex();
       if (unsubscribeEditingContext) unsubscribeEditingContext();
+      if (unsubscribeSkippedDrafters) unsubscribeSkippedDrafters();
     };
   }, []);
 
@@ -154,6 +164,10 @@ const AdminDashboard = () => {
     setFifaCurrentTurnIndex(0).catch((err) => {
       console.error('Error resetting turn:', err);
     });
+    setSkippedDrafterIds([]);
+    setFifaSkippedDrafterIds([]).catch((err) => {
+      console.error('Error resetting skip queue:', err);
+    });
   };
 
   // Names drafted more than once across all drafters (e.g. free-text typos/duplicate picks)
@@ -171,6 +185,25 @@ const AdminDashboard = () => {
 
   // If no draft order has been explicitly set, default to the current player order
   const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : drafters.map(drafter => drafter.id);
+  const currentTurnPlayerId = getCurrentTurnPlayerId(effectiveDraftOrder, currentTurnIndex, skippedDrafterIds);
+
+  // Skips whoever's turn it currently is; they'll be revisited once the rest of the round has gone.
+  // Skipping forfeits the current rule, so the next turn needs a freshly spun rule (same category).
+  const handleSkipCurrentTurn = () => {
+    if (!currentTurnPlayerId) return;
+
+    const { nextTurnIndex, nextSkippedDrafterIds } = getNextTurnStateAfterSkip(
+      effectiveDraftOrder,
+      currentTurnIndex,
+      skippedDrafterIds,
+    );
+    setCurrentTurnIndex(nextTurnIndex);
+    setSkippedDrafterIds(nextSkippedDrafterIds);
+    setCurrentRule({});
+    skipDraftTurn(nextTurnIndex, nextSkippedDrafterIds).catch((err) => {
+      console.error('Error skipping turn:', err);
+    });
+  };
 
   const orderedDrafters = [
     ...effectiveDraftOrder.map(id => drafters.find(drafter => drafter.id === id)).filter(Boolean),
@@ -225,11 +258,22 @@ const AdminDashboard = () => {
               }
             : undefined}
         >
-          {currentRule?.icon}
-          {' '}
-          {currentRule.name}
-          {' '}
-          {currentRule?.icon}
+          {currentRule
+            ? (
+
+                <>
+                  <span>
+                    {currentRule.icon}
+                    {' '}
+                  </span>
+                  <span>
+                    {currentRule.name}
+                    {' '}
+                  </span>
+                  <span>{currentRule.icon}</span>
+                </>
+              )
+            : '...Waiting on Spin'}
         </div>
         {!isLoading
           ? (
@@ -261,14 +305,13 @@ const AdminDashboard = () => {
           Complete Round
         </button>
         <div className="fifa-drafters-container">
-          {orderedDrafters.map((drafter, index) => {
+          {orderedDrafters.map((drafter) => {
             return (
               <AdminDrafterTable
                 key={drafter.id}
                 drafter={drafter}
-                currentTurnIndex={currentTurnIndex}
+                isActiveTurn={drafter.id === currentTurnPlayerId}
                 editDrafter={adminButtonsVisible}
-                index={index}
                 duplicatePlayerNames={duplicatePlayerNames}
                 editingPickIndex={editingContext?.drafterId === drafter.id ? editingContext.pickIndex : null}
                 onStartEditPick={pickIndex => handleStartEditPick(drafter, pickIndex)}
@@ -328,6 +371,20 @@ const AdminDashboard = () => {
               Reset Category
             </button>
 
+            <button
+              className="new-category-btn button passed-color m-auto w-full mt-4"
+              disabled={!currentTurnPlayerId}
+              style={{
+                '--button-color': '#b8860b',
+                '--button-text-color': 'white',
+              }}
+              onClick={handleSkipCurrentTurn}
+            >
+              Skip
+              {' '}
+              {drafters.find(d => d.id === currentTurnPlayerId)?.name || 'Current Turn'}
+            </button>
+
             <div className="fifa-draft-order mt-4">
               <button
                 className="new-category-btn button passed-color m-auto w-full"
@@ -348,7 +405,7 @@ const AdminDashboard = () => {
                     return (
                       <li
                         key={id}
-                        className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
+                        className={id === currentTurnPlayerId ? 'fifa-draft-order-active' : ''}
                       >
                         {drafter?.name || id}
                         <button

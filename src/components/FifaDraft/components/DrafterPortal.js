@@ -14,14 +14,16 @@ import {
   updateDraftedPlayerEntry,
   subscribeToFifaEditingContext,
   setFifaEditingContext,
+  subscribeToFifaSkippedDrafters,
+  skipDraftTurn,
 
 } from '../../../utils/fifaFirebase';
 import { lightenColor } from '../../../utils/lightenColor';
 import PlayerSearch from './PlayerSearch';
+import { getCurrentTurnPlayerId, getNextTurnStateAfterPick, getNextTurnStateAfterSkip } from '../utils/turnOrder';
 
 const DrafterPortal = ({ player, playerId }) => {
   const [draftedPlayer, setDraftedPlayer] = useState('');
-  const [lastPlayerSubmitted, setLastPlayerSubmitted] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [currentRule, setCurrentRule] = useState({});
@@ -33,12 +35,13 @@ const DrafterPortal = ({ player, playerId }) => {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [editingContext, setEditingContext] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [skippedDrafterIds, setSkippedDrafterIds] = useState([]);
+  const [isSkipping, setIsSkipping] = useState(false);
 
   useEffect(() => {
     if (!playerId) return;
 
     const unsubscribePlayer = subscribeToPlayer(playerId, (playerData) => {
-      setLastPlayerSubmitted(playerData.lastDraft || null);
       setDraftedPlayerList(playerData.draftedPlayerList || []);
     });
 
@@ -76,6 +79,10 @@ const DrafterPortal = ({ player, playerId }) => {
       setEditingContext(context);
     });
 
+    const unsubscribeSkippedDrafters = subscribeToFifaSkippedDrafters((ids) => {
+      setSkippedDrafterIds(ids || []);
+    });
+
     // Cleanup subscriptions on unmount
     return () => {
       if (unsubscribePlayer) unsubscribePlayer();
@@ -86,6 +93,7 @@ const DrafterPortal = ({ player, playerId }) => {
       if (unsubscribeDraftOrder) unsubscribeDraftOrder();
       if (unsubscribeTurnIndex) unsubscribeTurnIndex();
       if (unsubscribeEditingContext) unsubscribeEditingContext();
+      if (unsubscribeSkippedDrafters) unsubscribeSkippedDrafters();
     };
   }, [playerId]);
 
@@ -100,7 +108,7 @@ const DrafterPortal = ({ player, playerId }) => {
 
   // If no draft order has been explicitly set, default to the current player order
   const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : allPlayers.map(p => p.id);
-  const currentTurnPlayerId = effectiveDraftOrder[currentTurnIndex];
+  const currentTurnPlayerId = getCurrentTurnPlayerId(effectiveDraftOrder, currentTurnIndex, skippedDrafterIds);
   const isMyTurn = Boolean(currentTurnPlayerId) && currentTurnPlayerId === playerId;
   const currentTurnPlayerName = allPlayers.find(p => p.id === currentTurnPlayerId)?.name;
 
@@ -115,8 +123,12 @@ const DrafterPortal = ({ player, playerId }) => {
           currentCategory,
           currentRule: currentRule.shortName,
         };
-        await submitDraftedPlayer(playerId, draftEntry, currentTurnIndex + 1);
-        setLastPlayerSubmitted(draftEntry);
+        const { nextTurnIndex, nextSkippedDrafterIds } = getNextTurnStateAfterPick(
+          effectiveDraftOrder,
+          currentTurnIndex,
+          skippedDrafterIds,
+        );
+        await submitDraftedPlayer(playerId, draftEntry, nextTurnIndex, nextSkippedDrafterIds);
         setDraftedPlayer('');
       }
       catch (err) {
@@ -132,6 +144,39 @@ const DrafterPortal = ({ player, playerId }) => {
     if (e.key === 'Enter' && !isSubmitting) {
       handleSend();
     }
+  };
+
+  // Skipping forfeits the current rule, so the next turn (and this drafter, once revisited) needs a fresh spin
+  const handleSkip = async () => {
+    if (!isMyTurn) return;
+    setIsSkipping(true);
+    setError(null);
+
+    try {
+      const { nextTurnIndex, nextSkippedDrafterIds } = getNextTurnStateAfterSkip(
+        effectiveDraftOrder,
+        currentTurnIndex,
+        skippedDrafterIds,
+      );
+      setCurrentRule({});
+      await skipDraftTurn(nextTurnIndex, nextSkippedDrafterIds);
+    }
+    catch (err) {
+      console.error('Error skipping turn:', err);
+      setError('Failed to skip turn. Please try again.');
+    }
+    finally {
+      setIsSkipping(false);
+    }
+  };
+
+  const handlePlayerSkip = () => {
+    const confirmed = window.confirm(
+      'This will skip your turn. Are you sure?',
+    );
+    if (!confirmed) return;
+
+    handleSkip();
   };
 
   // Restores the category/rule that were active before the admin unlocked this pick, and clears the unlock
@@ -193,20 +238,21 @@ const DrafterPortal = ({ player, playerId }) => {
         <button
           onClick={handleSend}
           disabled={!draftedPlayer.trim() || isSubmitting}
-          style={{
-            padding: '12px 24px',
-            fontSize: '16px',
-            backgroundColor: draftedPlayer.trim() && !isSubmitting ? '#060CE9' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: draftedPlayer.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
-            fontWeight: 'bold',
-            minWidth: '100px',
-          }}
+          className="button"
         >
           {isSubmitting ? 'Sending...' : 'Send'}
         </button>
+        {currentCategory !== 'Rating' && (
+
+          <button
+            onClick={handlePlayerSkip}
+            disabled={isSubmitting || isSkipping}
+            className="button maroon"
+
+          >
+            {isSkipping ? 'Skipping...' : 'Skip'}
+          </button>
+        )}
       </div>
       {error && (
         <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>
@@ -222,23 +268,6 @@ const DrafterPortal = ({ player, playerId }) => {
     </div>
   );
 
-  const lastPickDisplay = lastPlayerSubmitted?.name && (
-    <div>
-      <p style={{ fontSize: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
-        Last Player:
-        {' '}
-        <strong>{lastPlayerSubmitted.name}</strong>
-        {' '}
-        (
-        {lastPlayerSubmitted.currentCategory}
-        :
-        {' '}
-        {lastPlayerSubmitted.currentRule}
-        )
-      </p>
-    </div>
-  );
-
   const answerDisplay = (isMyTurn && currentRule.name) ? inputField : waitingDisplay;
 
   return (
@@ -246,6 +275,7 @@ const DrafterPortal = ({ player, playerId }) => {
       <h2>{player}</h2>
       <p className="text-center" style={{ fontWeight: 'bold' }}>
         Round
+        {' '}
         {currentRound}
         {' '}
         / 15
@@ -272,7 +302,6 @@ const DrafterPortal = ({ player, playerId }) => {
         </div>
       )}
       {answerDisplay}
-      {lastPickDisplay}
       {draftedPlayerList.length > 0 && (
         <div>
           <h3>Your Picks</h3>
@@ -295,6 +324,7 @@ const DrafterPortal = ({ player, playerId }) => {
                   (
                   {pick.currentCategory}
                   :
+                  {' '}
                   {pick.currentRule}
                   )
                 </li>
