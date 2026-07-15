@@ -27,6 +27,7 @@ import CategoryWheel from './wheels/CategoryWheel';
 
 import { lightenColor } from '../../../utils/lightenColor';
 import AdminDrafterTable from './AdminDrafterTable';
+import AdminBracketDashboard from './AdminBracketDashboard';
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -319,7 +320,7 @@ const AdminDashboard = () => {
             );
           })}
         </div>
-
+        <AdminBracketDashboard players={drafters} />
         <div className="my-8">
           <button
             className="new-category-btn button passed-color m-auto"

@@ -300,6 +300,32 @@ export const subscribeToFifaDraftOrder = (callback) => {
 };
 
 /**
+ * Save the tournament bracket: an array of rounds, each round a
+ * { matchups: Array<{ id, player1Id, player1Name, player2Id, player2Name, winnerId }> }
+ * object (not a bare array - Firestore doesn't allow arrays nested directly inside arrays).
+ * A matchup with a null player2Id is a bye, auto-won by player1.
+ * @param {Array<{ matchups: Array<Object> }>} rounds - The bracket's rounds
+ */
+export const setFifaBracket = async (rounds) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { bracket: rounds }, { merge: true });
+};
+
+/**
+ * Subscribe to the tournament bracket (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the bracket's rounds array (or [])
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaBracket = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data().bracket || []) : []);
+  });
+};
+
+/**
  * Save (or clear) which drafted pick is currently unlocked for editing.
  * Set by an admin to let a specific drafter correct one of their own picks;
  * includes the category/rule that were active before the edit so they can be restored after.

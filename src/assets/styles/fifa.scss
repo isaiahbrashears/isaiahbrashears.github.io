@@ -92,6 +92,46 @@
   background-color: #ffcccc;
 }
 
+.fifa-draft-bracket-dash {
+  max-width: 40rem;
+  margin: auto;
+  padding: 1rem;
+}
+
+.fifa-bracket-round {
+  margin-top: 1.5rem;
+}
+
+.fifa-bracket-matchup-list {
+  list-style: none;
+  padding: 0;
+}
+
+.fifa-bracket-matchup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.fifa-bracket-player {
+  font-weight: bold;
+}
+
+.fifa-bracket-vs {
+  color: #888;
+  font-size: 14px;
+}
+
+.fifa-bracket-bye {
+  color: #016600;
+  font-weight: bold;
+}
+
 .fifa-draft-edit-pick-btn {
   margin-right: .35rem;
   font-size: 12px;
