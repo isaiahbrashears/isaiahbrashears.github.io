@@ -1017,10 +1017,16 @@
   color: #fff;
   border-radius: 8px;
   border: none;
-  background-color: blue;
+  background-color: rgb(8, 87, 166);
   display: block;
   text-align: center;
   font-weight: bold;
+
+  &:disabled {
+    background: #d4d4d4;
+    color: #bbb;
+    cursor: not-allowed;
+  }
 
   &.green {
     background-color: green;

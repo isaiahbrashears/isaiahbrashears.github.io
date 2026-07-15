@@ -1,9 +1,8 @@
-/* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { subscribeToPlayers, addFifaPlayer } from "../../../utils/fifaFirebase";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { subscribeToPlayers, addFifaPlayer } from '../../../utils/fifaFirebase';
 
-const PlayerSelect = () => {
+const DrafterSelect = () => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -34,17 +33,19 @@ const PlayerSelect = () => {
       await addFifaPlayer(trimmed);
       setNewName('');
       navigate(`/fifa-draft/${encodeURIComponent(trimmed)}`);
-    } catch (err) {
+    }
+    catch (err) {
       console.error('Error signing up:', err);
       setError('Failed to join. Please try again.');
-    } finally {
+    }
+    finally {
       setIsSubmitting(false);
     }
   };
 
   const handlePlayerClick = (player) => {
     navigate(`/fifa-draft/${encodeURIComponent(player.name)}`, {
-      state: { playerId: player.id }
+      state: { playerId: player.id },
     });
   };
 
@@ -57,8 +58,8 @@ const PlayerSelect = () => {
             <input
               type="text"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSignUp()}
               placeholder="Enter your name..."
               disabled={isSubmitting}
             />
@@ -73,23 +74,27 @@ const PlayerSelect = () => {
           <span>or select your name</span>
         </div>
 
-        {loading ? (
-          <p className="text-center">Loading players...</p>
-        ) : players.length > 0 ? (
-          <div className="players-grid">
-            {players.map((player) => (
-              <button
-                key={player.id}
-                onClick={() => handlePlayerClick(player)}
-                className="player-button"
-              >
-                {player.name}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center">No players yet. Be the first to join!</p>
-        )}
+        {loading
+          ? (
+              <p className="text-center">Loading players...</p>
+            )
+          : players.length > 0
+            ? (
+                <div className="players-grid">
+                  {players.map(player => (
+                    <button
+                      key={player.id}
+                      onClick={() => handlePlayerClick(player)}
+                      className="player-button"
+                    >
+                      {player.name}
+                    </button>
+                  ))}
+                </div>
+              )
+            : (
+                <p className="text-center">No players yet. Be the first to join!</p>
+              )}
 
         <div className="divider">
           <span>or</span>
@@ -108,4 +113,4 @@ const PlayerSelect = () => {
   );
 };
 
-export default PlayerSelect;
+export default DrafterSelect;

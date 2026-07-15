@@ -6,12 +6,10 @@ import {
   getDocs,
   setDoc,
   updateDoc,
-  deleteDoc,
   onSnapshot,
   writeBatch,
-  increment,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
 } from 'firebase/firestore';
 
 // Collection references
@@ -34,7 +32,7 @@ export const initializePlayers = async (fifaPlayerNames) => {
       answer: '',
       wager: 0,
       wagerSubmitted: false,
-      order: index + 1
+      order: index + 1,
     });
   });
 
@@ -47,11 +45,11 @@ export const initializePlayers = async (fifaPlayerNames) => {
 export const initializeGameState = async () => {
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
   await setDoc(gameStateRef, {
-    categoryIndex: 0,    // 0-5 for categories A-F
-    scoreIndex: 0,       // 0-29 for the 30 questions (6 categories x 5 scores)
+    categoryIndex: 0, // 0-5 for categories A-F
+    scoreIndex: 0, // 0-29 for the 30 questions (6 categories x 5 scores)
     isFinalJeopardy: false,
     categories: ['Category 1', 'Category 2', 'Category 3', 'Category 4', 'Category 5', 'Category 6'],
-    scores: [200, 400, 600, 800, 1000]
+    scores: [200, 400, 600, 800, 1000],
   });
 };
 
@@ -67,7 +65,7 @@ export const fetchAllFifaPlayers = async () => {
   snapshot.forEach((doc) => {
     players.push({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
     });
   });
 
@@ -118,21 +116,89 @@ export const fetchFifaGameState = async () => {
  * @param {string} playerId - The player's document ID
  * @param {{ name: string, currentCategory: string, currentRule: string }} draftedPlayer - The drafted player entry
  * @param {number} nextTurnIndex - Index into the draft order that should become active next
+ * @param {Array<string>} nextSkippedDrafterIds - Updated skip queue (see turnOrder.js)
  */
-export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex) => {
+export const submitDraftedPlayer = async (playerId, draftedPlayer, nextTurnIndex, nextSkippedDrafterIds) => {
   const batch = writeBatch(db);
 
   const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
   batch.update(playerRef, {
     lastDraft: draftedPlayer,
     draftedPlayerList: arrayUnion(draftedPlayer),
-    submittedAt: serverTimestamp()
+    submittedAt: serverTimestamp(),
   });
 
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex }, { merge: true });
+  batch.set(gameStateRef, { currentTurnIndex: nextTurnIndex, skippedDrafterIds: nextSkippedDrafterIds }, { merge: true });
 
   await batch.commit();
+};
+
+/**
+ * Skip the current drafter's turn without recording a pick, advancing the turn
+ * per the queue rules in turnOrder.js (the skipped drafter gets revisited later in the round).
+ * Also clears the current rule, since skipping forfeits that spin - whoever's up
+ * next (including the skipped drafter, once revisited) needs a freshly spun rule.
+ * @param {number} nextTurnIndex - Index into the draft order that should become active next
+ * @param {Array<string>} nextSkippedDrafterIds - Updated skip queue (see turnOrder.js)
+ */
+export const skipDraftTurn = async (nextTurnIndex, nextSkippedDrafterIds) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, {
+    currentTurnIndex: nextTurnIndex,
+    skippedDrafterIds: nextSkippedDrafterIds,
+    currentRule: {},
+  }, { merge: true });
+};
+
+/**
+ * Save (or clear) the skip queue directly, e.g. when starting a new round
+ * @param {Array<string>} ids - Player IDs waiting to be revisited, in order
+ */
+export const setFifaSkippedDrafterIds = async (ids) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { skippedDrafterIds: ids }, { merge: true });
+};
+
+/**
+ * Subscribe to the current skip queue (real-time updates).
+ * Safe to use even if the game state doc hasn't been initialized yet.
+ * @param {Function} callback - Called with the skip queue array (player IDs, or [])
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaSkippedDrafters = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data().skippedDrafterIds || []) : []);
+  });
+};
+
+/**
+ * Replace a single entry in a player's draftedPlayerList (e.g. to fix a typo),
+ * keeping its recorded category/rule intact unless overridden in updatedEntry.
+ * Also updates lastDraft if the edited entry is the most recent pick.
+ * @param {string} playerId - The player's document ID
+ * @param {number} pickIndex - Index into the drafter's draftedPlayerList
+ * @param {{ name: string, currentCategory: string, currentRule: string }} updatedEntry - The corrected entry
+ */
+export const updateDraftedPlayerEntry = async (playerId, pickIndex, updatedEntry) => {
+  const playerRef = doc(db, PLAYERS_COLLECTION, playerId);
+  const snapshot = await getDoc(playerRef);
+  if (!snapshot.exists()) return;
+
+  const draftedPlayerList = snapshot.data().draftedPlayerList || [];
+  if (pickIndex < 0 || pickIndex >= draftedPlayerList.length) return;
+
+  const newList = [...draftedPlayerList];
+  newList[pickIndex] = updatedEntry;
+
+  const updates = { draftedPlayerList: newList };
+  if (pickIndex === draftedPlayerList.length - 1) {
+    updates.lastDraft = updatedEntry;
+  }
+
+  await updateDoc(playerRef, updates);
 };
 
 export const setPlayerScore = async (playerId, score) => {
@@ -171,7 +237,6 @@ export const subscribeToFifaCurrentRule = (callback) => {
     callback(snapshot.exists() ? snapshot.data().currentRule : undefined);
   });
 };
-
 
 /**
  * Subscribe to just the current FIFA draft category (real-time updates).
@@ -212,12 +277,12 @@ export const subscribeToFifaCurrentRound = (callback) => {
 
 /**
  * Save the draft order (array of player document IDs) and reset the turn
- * back to the first drafter in that order
+ * back to the first drafter in that order, clearing any pending skips
  * @param {Array<string>} playerIds - Ordered array of player document IDs
  */
 export const setFifaDraftOrder = async (playerIds) => {
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  await setDoc(gameStateRef, { draftOrder: playerIds, currentTurnIndex: 0 }, { merge: true });
+  await setDoc(gameStateRef, { draftOrder: playerIds, currentTurnIndex: 0, skippedDrafterIds: [] }, { merge: true });
 };
 
 /**
@@ -231,6 +296,30 @@ export const subscribeToFifaDraftOrder = (callback) => {
 
   return onSnapshot(gameStateRef, (snapshot) => {
     callback(snapshot.exists() ? snapshot.data().draftOrder : undefined);
+  });
+};
+
+/**
+ * Save (or clear) which drafted pick is currently unlocked for editing.
+ * Set by an admin to let a specific drafter correct one of their own picks;
+ * includes the category/rule that were active before the edit so they can be restored after.
+ * @param {{ drafterId: string, pickIndex: number, previousCategory: string, previousRule: Object }|null} context
+ */
+export const setFifaEditingContext = async (context) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+  await setDoc(gameStateRef, { editingContext: context }, { merge: true });
+};
+
+/**
+ * Subscribe to the currently unlocked pick edit, if any (real-time updates).
+ * @param {Function} callback - Called with the editing context object (or null)
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToFifaEditingContext = (callback) => {
+  const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
+
+  return onSnapshot(gameStateRef, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data().editingContext || null) : null);
   });
 };
 
@@ -272,7 +361,7 @@ export const advanceToNextQuestion = async () => {
   }
 
   await updateDoc(gameStateRef, {
-    scoreIndex: nextScoreIndex
+    scoreIndex: nextScoreIndex,
   });
 };
 
@@ -299,7 +388,7 @@ export const addFifaPlayer = async (name) => {
     name: trimmed,
     draftedPlayerList: [],
     lastDraft: '',
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
   }, { merge: true });
 
   return docId;
@@ -314,9 +403,11 @@ export const deleteFifaPlayer = async (playerId) => {
   const gameState = await fetchFifaGameState();
   const draftOrder = gameState.draftOrder || [];
   const currentTurnIndex = typeof gameState.currentTurnIndex === 'number' ? gameState.currentTurnIndex : 0;
+  const skippedDrafterIds = gameState.skippedDrafterIds || [];
 
   const removedIndex = draftOrder.indexOf(playerId);
-  const newDraftOrder = draftOrder.filter((id) => id !== playerId);
+  const newDraftOrder = draftOrder.filter(id => id !== playerId);
+  const newSkippedDrafterIds = skippedDrafterIds.filter(id => id !== playerId);
 
   let newTurnIndex = currentTurnIndex;
   if (removedIndex !== -1 && removedIndex < currentTurnIndex) {
@@ -330,7 +421,11 @@ export const deleteFifaPlayer = async (playerId) => {
   batch.delete(playerRef);
 
   const gameStateRef = doc(db, GAME_COLLECTION, GAME_STATE_DOC);
-  batch.set(gameStateRef, { draftOrder: newDraftOrder, currentTurnIndex: newTurnIndex }, { merge: true });
+  batch.set(gameStateRef, {
+    draftOrder: newDraftOrder,
+    currentTurnIndex: newTurnIndex,
+    skippedDrafterIds: newSkippedDrafterIds,
+  }, { merge: true });
 
   await batch.commit();
 };
@@ -354,7 +449,8 @@ export const resetFifaGame = async () => {
     currentRule: {},
     currentRound: 1,
     draftOrder: [],
-    currentTurnIndex: 0
+    currentTurnIndex: 0,
+    skippedDrafterIds: [],
   });
 
   await batch.commit();
@@ -368,7 +464,7 @@ export const subscribeToPlayers = (callback) => {
     snapshot.forEach((doc) => {
       players.push({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       });
     });
 
@@ -391,7 +487,7 @@ export const subscribeToPlayer = (playerId, callback) => {
     if (snapshot.exists()) {
       callback({
         id: snapshot.id,
-        ...snapshot.data()
+        ...snapshot.data(),
       });
     }
   });

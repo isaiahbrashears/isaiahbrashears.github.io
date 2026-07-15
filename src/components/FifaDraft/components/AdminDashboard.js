@@ -1,5 +1,4 @@
-/* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   setFifaCurrentCategory,
   subscribeToFifaCurrentCategory,
@@ -13,15 +12,21 @@ import {
   subscribeToFifaCurrentTurnIndex,
   subscribeToPlayers,
   resetFifaGame,
-} from "../../../utils/fifaFirebase";
+  setFifaEditingContext,
+  subscribeToFifaEditingContext,
+  skipDraftTurn,
+  setFifaSkippedDrafterIds,
+  subscribeToFifaSkippedDrafters,
+} from '../../../utils/fifaFirebase';
+import { getCurrentTurnPlayerId, getNextTurnStateAfterSkip } from '../utils/turnOrder';
 import LeagueWheel from './wheels/LeagueWheel';
-import NationalityWheel from "./wheels/NationalityWheel";
-import NumberWheel from "./wheels/NumberWheel";
-import RatingWheel from "./wheels/RatingWheel";
-import CategoryWheel from "./wheels/CategoryWheel";
+import NationalityWheel from './wheels/NationalityWheel';
+import NumberWheel from './wheels/NumberWheel';
+import RatingWheel from './wheels/RatingWheel';
+import CategoryWheel from './wheels/CategoryWheel';
 
-import { lightenColor } from "../../../utils/lightenColor";
-import AdminDrafterTable from "./AdminDrafterTable";
+import { lightenColor } from '../../../utils/lightenColor';
+import AdminDrafterTable from './AdminDrafterTable';
 
 const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -33,14 +38,16 @@ const AdminDashboard = () => {
   const [drafters, setDrafters] = useState([]);
   const [draftOrder, setDraftOrder] = useState([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [editingContext, setEditingContext] = useState(null);
+  const [skippedDrafterIds, setSkippedDrafterIds] = useState([]);
 
   const wheels = {
     Category: CategoryWheel,
     League: LeagueWheel,
     Nationality: NationalityWheel,
     Number: NumberWheel,
-    Rating: RatingWheel
-  }
+    Rating: RatingWheel,
+  };
 
   const WheelComponent = wheels[currentCategory];
 
@@ -53,30 +60,38 @@ const AdminDashboard = () => {
     });
 
     const unsubscribeRule = subscribeToFifaCurrentRule((rule) => {
-        if (rule) {
-          setCurrentRule(rule)
-        }
-    })
+      if (rule) {
+        setCurrentRule(rule);
+      }
+    });
 
     const unsubscribeRound = subscribeToFifaCurrentRound((round) => {
-        if (round) {
-          setCurrentRound(round)
-        }
-    })
+      if (round) {
+        setCurrentRound(round);
+      }
+    });
 
     const unsubscribeDrafters = subscribeToPlayers((players) => {
-        if (players) {
-          setDrafters(players)
-        }
-    })
+      if (players) {
+        setDrafters(players);
+      }
+    });
 
     const unsubscribeDraftOrder = subscribeToFifaDraftOrder((order) => {
-        setDraftOrder(order || [])
-    })
+      setDraftOrder(order || []);
+    });
 
     const unsubscribeTurnIndex = subscribeToFifaCurrentTurnIndex((index) => {
-        setCurrentTurnIndex(typeof index === 'number' ? index : 0)
-    })
+      setCurrentTurnIndex(typeof index === 'number' ? index : 0);
+    });
+
+    const unsubscribeEditingContext = subscribeToFifaEditingContext((context) => {
+      setEditingContext(context);
+    });
+
+    const unsubscribeSkippedDrafters = subscribeToFifaSkippedDrafters((ids) => {
+      setSkippedDrafterIds(ids || []);
+    });
 
     return () => {
       if (unsubscribeCategory) unsubscribeCategory();
@@ -85,6 +100,8 @@ const AdminDashboard = () => {
       if (unsubscribeDrafters) unsubscribeDrafters();
       if (unsubscribeDraftOrder) unsubscribeDraftOrder();
       if (unsubscribeTurnIndex) unsubscribeTurnIndex();
+      if (unsubscribeEditingContext) unsubscribeEditingContext();
+      if (unsubscribeSkippedDrafters) unsubscribeSkippedDrafters();
     };
   }, []);
 
@@ -102,15 +119,40 @@ const AdminDashboard = () => {
     });
   };
 
+  // Unlocks a specific pick so its drafter (and only that drafter) can correct its name
+  const handleStartEditPick = (drafter, pickIndex) => {
+    const pick = drafter.draftedPlayerList?.[pickIndex];
+    if (!pick) return;
+
+    handleCategoryChange(pick.currentCategory);
+    handleRuleChange({ name: pick.currentRule, shortName: pick.currentRule });
+    setFifaEditingContext({
+      drafterId: drafter.id,
+      pickIndex,
+      previousCategory: currentCategory,
+      previousRule: currentRule,
+    }).catch((err) => {
+      console.error('Error starting pick edit:', err);
+    });
+  };
+
+  const handleCancelEditPick = () => {
+    if (editingContext) {
+      handleCategoryChange(editingContext.previousCategory);
+      handleRuleChange(editingContext.previousRule);
+    }
+    setFifaEditingContext(null).catch((err) => {
+      console.error('Error cancelling pick edit:', err);
+    });
+  };
+
   const handleResetCategory = () => {
     setCurrentRule({});
     setFifaCurrentRule({}).catch((err) => {
       console.error('Error saving rule:', err);
     });
-    handleCategoryChange('Category')
+    handleCategoryChange('Category');
   };
-
-
 
   const handleNextRound = () => {
     const nextRound = Math.min(currentRound + 1, 15);
@@ -122,14 +164,50 @@ const AdminDashboard = () => {
     setFifaCurrentTurnIndex(0).catch((err) => {
       console.error('Error resetting turn:', err);
     });
+    setSkippedDrafterIds([]);
+    setFifaSkippedDrafterIds([]).catch((err) => {
+      console.error('Error resetting skip queue:', err);
+    });
   };
 
+  // Names drafted more than once across all drafters (e.g. free-text typos/duplicate picks)
+  const duplicatePlayerNames = (() => {
+    const counts = {};
+    drafters.forEach((drafter) => {
+      (drafter.draftedPlayerList || []).forEach((pick) => {
+        const key = pick.name?.trim().toLowerCase();
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+      });
+    });
+    return new Set(Object.keys(counts).filter(key => counts[key] > 1));
+  })();
+
   // If no draft order has been explicitly set, default to the current player order
-  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : drafters.map((drafter) => drafter.id);
+  const effectiveDraftOrder = draftOrder.length > 0 ? draftOrder : drafters.map(drafter => drafter.id);
+  const currentTurnPlayerId = getCurrentTurnPlayerId(effectiveDraftOrder, currentTurnIndex, skippedDrafterIds);
+
+  // Skips whoever's turn it currently is; they'll be revisited once the rest of the round has gone.
+  // Skipping forfeits the current rule, so the next turn needs a freshly spun rule (same category).
+  const handleSkipCurrentTurn = () => {
+    if (!currentTurnPlayerId) return;
+
+    const { nextTurnIndex, nextSkippedDrafterIds } = getNextTurnStateAfterSkip(
+      effectiveDraftOrder,
+      currentTurnIndex,
+      skippedDrafterIds,
+    );
+    setCurrentTurnIndex(nextTurnIndex);
+    setSkippedDrafterIds(nextSkippedDrafterIds);
+    setCurrentRule({});
+    skipDraftTurn(nextTurnIndex, nextSkippedDrafterIds).catch((err) => {
+      console.error('Error skipping turn:', err);
+    });
+  };
 
   const orderedDrafters = [
-    ...effectiveDraftOrder.map((id) => drafters.find((drafter) => drafter.id === id)).filter(Boolean),
-    ...drafters.filter((drafter) => !effectiveDraftOrder.includes(drafter.id)),
+    ...effectiveDraftOrder.map(id => drafters.find(drafter => drafter.id === id)).filter(Boolean),
+    ...drafters.filter(drafter => !effectiveDraftOrder.includes(drafter.id)),
   ];
 
   const moveDraftOrderEntry = (index, direction) => {
@@ -152,13 +230,9 @@ const AdminDashboard = () => {
     });
   };
 
-  const toggleAdminButtons = () => {
-    setAdminButtonsVisible(!adminButtonsVisible);
-  }
-
   const handleFullReset = () => {
     const confirmed = window.confirm(
-      'This will permanently delete all players and reset the entire draft. Are you sure?'
+      'This will permanently delete all players and reset the entire draft. Are you sure?',
     );
     if (!confirmed) return;
 
@@ -170,161 +244,202 @@ const AdminDashboard = () => {
   const completeRound = () => {
     handleNextRound();
     handleResetCategory();
-  }
+  };
   return (
-   <div className="fifa-draft-admin-Dashboard">
-    <div className="fifa-draft-wheels">
-      <h2 className="text-center">{currentCategory}</h2>
-      <div
-        className="fifa-draft-rule-display"
-        style={currentRule.color ? {
-          '--rule-color': currentRule.color,
-          '--rule-color-light': lightenColor(currentRule.color, 40),
-        } : undefined}
-      >
-         {currentRule?.icon} {currentRule.name} {currentRule?.icon}
+    <div className="fifa-draft-admin-Dashboard">
+      <div className="fifa-draft-wheels">
+        <h2 className="text-center">{currentCategory}</h2>
+        <div
+          className="fifa-draft-rule-display"
+          style={currentRule.color
+            ? {
+                '--rule-color': currentRule.color,
+                '--rule-color-light': lightenColor(currentRule.color, 40),
+              }
+            : undefined}
+        >
+          {currentRule.name
+            ? (
+                <>
+                  <span>
+                    {currentRule.icon}
+                    {' '}
+                  </span>
+                  <span>
+                    {currentRule.name}
+                    {' '}
+                  </span>
+                  <span>{currentRule.icon}</span>
+                </>
+              )
+            : '...Waiting on Spin'}
         </div>
-        {!isLoading ?
-          <WheelComponent
-          setCurrentCategory={handleCategoryChange}
-          setCurrentRule={handleRuleChange}
-          />
-        : <p className="text-center">Loading...</p>
-      }
-    </div>
-
-    <div className="fifa-draft-player-tracking">
-      <h1 className="text-center">Admin Portal</h1>
-      <h2 className="text-center">Round {currentRound} / 15</h2>
-      <button
-        className="new-category-btn button passed-color m-auto"
-        style={{
-          '--button-color': '#117996',
-          '--button-text-color': 'white',
-        }} onClick={completeRound}
-      >
-        Complete Round
-      </button>
-      <div className="fifa-drafters-container">
-        {orderedDrafters.map((drafter, index) => {
-          return (
-            <AdminDrafterTable
-              key={drafter.id}
-              drafter={drafter}
-              currentTurnIndex={currentTurnIndex}
-              editDrafter={adminButtonsVisible}
-              index={index}
-            />
-          )
-        })}
+        {!isLoading
+          ? (
+              <WheelComponent
+                setCurrentCategory={handleCategoryChange}
+                setCurrentRule={handleRuleChange}
+              />
+            )
+          : <p className="text-center">Loading...</p>}
       </div>
 
-      <div className="my-8">
+      <div className="fifa-draft-player-tracking">
+        <h1 className="text-center">Admin Portal</h1>
+        <h2 className="text-center">
+          Round
+          {' '}
+          {currentRound}
+          {' '}
+          / 15
+        </h2>
         <button
           className="new-category-btn button passed-color m-auto"
           style={{
-            '--button-color': '#ffdf00',
-            '--button-text-color': 'black',
+            '--button-color': '#117996',
+            '--button-text-color': 'white',
           }}
-          onClick={() => setAdminButtonsVisible(!adminButtonsVisible)
-        }>
-          {!adminButtonsVisible ? 'Admin Functions' : 'Hide Admin Functions'}
+          onClick={completeRound}
+        >
+          Complete Round
         </button>
-      </div>
-      {adminButtonsVisible && (
-        <div className="fifa-admin-buttons">
-          <div className="flex mb-4">
-            <button
+        <div className="fifa-drafters-container">
+          {orderedDrafters.map((drafter) => {
+            return (
+              <AdminDrafterTable
+                key={drafter.id}
+                drafter={drafter}
+                isActiveTurn={drafter.id === currentTurnPlayerId}
+                editDrafter={adminButtonsVisible}
+                duplicatePlayerNames={duplicatePlayerNames}
+                editingPickIndex={editingContext?.drafterId === drafter.id ? editingContext.pickIndex : null}
+                onStartEditPick={pickIndex => handleStartEditPick(drafter, pickIndex)}
+                onCancelEditPick={handleCancelEditPick}
+              />
+            );
+          })}
+        </div>
+
+        <div className="my-8">
+          <button
+            className="new-category-btn button passed-color m-auto"
+            style={{
+              '--button-color': '#ffdf00',
+              '--button-text-color': 'black',
+            }}
+            onClick={() => setAdminButtonsVisible(!adminButtonsVisible)}
+          >
+            {!adminButtonsVisible ? 'Admin Functions' : 'Hide Admin Functions'}
+          </button>
+        </div>
+        {adminButtonsVisible && (
+          <div className="fifa-admin-buttons">
+            <div className="flex mb-4">
+              <button
                 className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound <= 1}
                 style={{
                   '--button-color': '#6f1515',
                   '--button-text-color': 'white',
                 }}
-                onClick={() => handlePrevRound()
-                }>
-              Prev Round
-            </button>
-            <span className="px-2"></span>
-            <button
+                onClick={() => handlePrevRound()}
+              >
+                Prev Round
+              </button>
+              <span className="px-2"></span>
+              <button
                 className="new-category-btn button passed-color m-auto w-full"
                 disabled={currentRound >= 15}
                 style={{
                   '--button-color': '#2980b9',
                   '--button-text-color': 'white',
                 }}
-                onClick={() => handleNextRound()
-                }>
-              Next Round
-            </button>
-          </div>
-          <button
-            className="new-category-btn button passed-color m-auto w-full"
-            style={{
-              '--button-color': '#016600',
-              '--button-text-color': 'white',
-            }}
-            onClick={() => handleResetCategory()
-            }>
-            Reset Category
-          </button>
-
-          <div className="fifa-draft-order mt-4">
+                onClick={() => handleNextRound()}
+              >
+                Next Round
+              </button>
+            </div>
             <button
               className="new-category-btn button passed-color m-auto w-full"
               style={{
-                '--button-color': '#010000',
+                '--button-color': '#016600',
                 '--button-text-color': 'white',
               }}
-              onClick={() => setDraftOrderEditable(!draftOrderEditable)}
+              onClick={() => handleResetCategory()}
             >
-              Edit Draft Order
+              Reset Category
             </button>
-            {draftOrderEditable && (
-              <ol className="fifa-draft-order-list">
-                <h3>Draft Order</h3>
 
-                {effectiveDraftOrder.map((id, index) => {
-                  const drafter = drafters.find((d) => d.id === id);
-                  return (
-                    <li
-                      key={id}
-                      className={index === currentTurnIndex ? 'fifa-draft-order-active' : ''}
-                    >
-                      {drafter?.name || id}
-                      <button
-                        onClick={() => moveDraftOrderEntry(index, -1)}
-                        disabled={index === 0}
-                        className="ml-auto"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => moveDraftOrderEntry(index, 1)}
-                        disabled={index === effectiveDraftOrder.length - 1}
-                      >
-                        ↓
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
             <button
               className="new-category-btn button passed-color m-auto w-full mt-4"
+              disabled={!currentTurnPlayerId}
               style={{
-                '--button-color': '#8b0000',
+                '--button-color': '#b8860b',
                 '--button-text-color': 'white',
               }}
-              onClick={() => handleFullReset()
-              }>
-              Full Reset (Delete All Players)
+              onClick={handleSkipCurrentTurn}
+            >
+              Skip
+              {' '}
+              {drafters.find(d => d.id === currentTurnPlayerId)?.name || 'Current Turn'}
             </button>
+
+            <div className="fifa-draft-order mt-4">
+              <button
+                className="new-category-btn button passed-color m-auto w-full"
+                style={{
+                  '--button-color': '#010000',
+                  '--button-text-color': 'white',
+                }}
+                onClick={() => setDraftOrderEditable(!draftOrderEditable)}
+              >
+                Edit Draft Order
+              </button>
+              {draftOrderEditable && (
+                <ol className="fifa-draft-order-list">
+                  <h3>Draft Order</h3>
+
+                  {effectiveDraftOrder.map((id, index) => {
+                    const drafter = drafters.find(d => d.id === id);
+                    return (
+                      <li
+                        key={id}
+                        className={id === currentTurnPlayerId ? 'fifa-draft-order-active' : ''}
+                      >
+                        {drafter?.name || id}
+                        <button
+                          onClick={() => moveDraftOrderEntry(index, -1)}
+                          disabled={index === 0}
+                          className="ml-auto"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={() => moveDraftOrderEntry(index, 1)}
+                          disabled={index === effectiveDraftOrder.length - 1}
+                        >
+                          ↓
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              <button
+                className="new-category-btn button passed-color m-auto w-full mt-4"
+                style={{
+                  '--button-color': '#8b0000',
+                  '--button-text-color': 'white',
+                }}
+                onClick={() => handleFullReset()}
+              >
+                Full Reset (Delete All Players)
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
-   </div>
   );
 };
 

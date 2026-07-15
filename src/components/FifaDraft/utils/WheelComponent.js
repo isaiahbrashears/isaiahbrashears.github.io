@@ -6,7 +6,7 @@ import React, { useState, useRef, useEffect } from 'react';
 // Short Name is the label used on wheel
 
 // const LEAGUES = [
-//   { name: 'Premier League', color: '#38003c', shortName: 'EPL', weight: 7, icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+//   { name: 'English Premier League', color: '#38003c', shortName: 'EPL', weight: 7, icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
 //   { name: 'Bundesliga', color: '#d20515', shortName: 'Bundesliga', weight: 7, icon: '🇩🇪' },
 // ];
 
