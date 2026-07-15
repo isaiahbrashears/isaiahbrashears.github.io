@@ -258,9 +258,8 @@ const AdminDashboard = () => {
               }
             : undefined}
         >
-          {currentRule
+          {currentRule.name
             ? (
-
                 <>
                   <span>
                     {currentRule.icon}
