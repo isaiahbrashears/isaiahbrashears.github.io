@@ -1,52 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { subscribeToPlayers, addFifaPlayer } from '../../../utils/fifaFirebase';
+import { subscribeToFifaBracket } from '../../../utils/fifaFirebase';
+import BracketTree from './BracketTree';
 
 const BracketDisplay = () => {
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [matches, setMatches] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToPlayers((allPlayers) => {
-      const filteredPlayers = allPlayers.filter(p => p.name && p.name.trim() !== '');
-      setPlayers(filteredPlayers);
-      setLoading(false);
+    const unsubscribeBracket = subscribeToFifaBracket((bracketMatches) => {
+      setMatches(bracketMatches || []);
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeBracket) unsubscribeBracket();
     };
   }, []);
 
-  const handleSignUp = async () => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await addFifaPlayer(trimmed);
-      setNewName('');
-      navigate(`/fifa-draft/${encodeURIComponent(trimmed)}`);
-    }
-    catch (err) {
-      console.error('Error signing up:', err);
-      setError('Failed to join. Please try again.');
-    }
-    finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="fifa-draft">
+      <h1 className="text-center fifa-draft-bracket-header">Tournament Knockout</h1>
       <div className="fifa-draft-bracket-display">
-
+        {matches.length > 0
+          ? <BracketTree matches={matches} />
+          : <p className="text-center">The bracket hasn&apos;t been set yet.</p>}
       </div>
     </div>
   );

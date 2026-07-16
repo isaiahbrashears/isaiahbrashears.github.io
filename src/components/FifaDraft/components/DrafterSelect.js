@@ -108,6 +108,14 @@ const DrafterSelect = () => {
             Admin Portal
           </button>
         </div>
+        <div className="admin-link">
+          <button
+            onClick={() => navigate('/fifa-draft/bracket-display')}
+            className="admin-link-button"
+          >
+            Bracket Display
+          </button>
+        </div>
       </div>
     </div>
   );

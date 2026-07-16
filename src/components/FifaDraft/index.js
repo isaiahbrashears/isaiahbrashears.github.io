@@ -4,6 +4,7 @@ import DrafterSelect from './components/DrafterSelect';
 import { findFifaPlayerByName } from '../../utils/fifaFirebase';
 import DrafterPortal from './components/DrafterPortal';
 import AdminDashboard from './components/AdminDashboard';
+import BracketDisplay from './components/BracketDisplay';
 
 const FifaDraft = () => {
   const { playerName } = useParams();
@@ -11,7 +12,7 @@ const FifaDraft = () => {
   const [playerId, setPlayerId] = useState(location.state?.playerId || null);
 
   useEffect(() => {
-    if (playerName && playerName !== 'admin') {
+    if (playerName && playerName !== 'admin' && playerName !== 'bracket-display') {
       const findPlayer = async () => {
         try {
           const decodedPlayerName = decodeURIComponent(playerName);
@@ -39,6 +40,10 @@ const FifaDraft = () => {
 
   if (playerName === 'admin') {
     return <AdminDashboard />;
+  }
+
+  if (playerName === 'bracket-display') {
+    return <BracketDisplay />;
   }
 
   if (playerId) {

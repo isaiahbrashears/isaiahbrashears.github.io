@@ -29,8 +29,8 @@
     "build": "webpack --mode production"
   },
   "dependencies": {
+    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "axios": "^1.13.2",
-    "brackets-manager": "^1.11.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

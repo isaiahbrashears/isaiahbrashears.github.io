@@ -93,7 +93,7 @@
 }
 
 .fifa-draft-bracket-dash {
-  max-width: 40rem;
+  // max-width: 40rem;
   margin: auto;
   padding: 1rem;
 }
@@ -132,6 +132,30 @@
   font-weight: bold;
 }
 
+.fifa-bracket-tree {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 1rem;
+
+  svg {
+    max-width: 100%;
+  }
+  > div {
+    margin: auto;
+  }
+}
+
+.fifa-draft-bracket-display {
+  padding: 1rem;
+  background: black;
+  min-height: 100vh;
+  color: #ffdf00;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
 .fifa-draft-edit-pick-btn {
   margin-right: .35rem;
   font-size: 12px;
@@ -145,6 +169,10 @@
 .fifa-draft-pick-has-edit-btn {
   list-style: none;
   margin-left: -1.5rem;
+}
+
+.fifa-draft-bracket-header {
+  color: #f33244;
 }
 
 .fifa-draft-pick-editing {
